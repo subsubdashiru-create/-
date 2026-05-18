@@ -1,0 +1,1756 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Real Tsum Clone - Perfect UI Edition</title>
+    <style>
+        /* =========================================
+           全体設定・共通UI（ファブリック風）
+        ========================================= */
+        :root {
+            --ui-blue: #2abcf6;
+            --ui-dark-blue: #1c4568;
+            --btn-orange-top: #ffeb3b;
+            --btn-orange-bottom: #ff9800;
+            --btn-yellow-top: #ffff00;
+            --btn-yellow-bottom: #ffc107;
+            
+            --fabric-light: 
+                linear-gradient(rgba(255,255,255,0.1), rgba(255,255,255,0)),
+                repeating-linear-gradient(45deg, rgba(255,255,255,0.15) 0, rgba(255,255,255,0.15) 1px, transparent 1px, transparent 4px),
+                repeating-linear-gradient(-45deg, rgba(255,255,255,0.15) 0, rgba(255,255,255,0.15) 1px, transparent 1px, transparent 4px);
+            --fabric-dark: 
+                linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0)),
+                repeating-linear-gradient(45deg, rgba(0,0,0,0.2) 0, rgba(0,0,0,0.2) 1px, transparent 1px, transparent 4px),
+                repeating-linear-gradient(-45deg, rgba(0,0,0,0.2) 0, rgba(0,0,0,0.2) 1px, transparent 1px, transparent 4px);
+        }
+        
+        body {
+            margin: 0; padding: 0; background-color: #111;
+            font-family: 'M PLUS Rounded 1c', 'Helvetica Neue', Arial, sans-serif;
+            display: flex; justify-content: center; align-items: center;
+            height: 100vh; overflow: hidden; touch-action: none;
+            user-select: none; -webkit-user-select: none;
+        }
+        #app-container {
+            position: relative; width: 375px; height: 667px;
+            background: var(--fabric-dark), linear-gradient(to bottom, #0d6b9e 0%, #154589 100%);
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            border-radius: 10px; overflow: hidden;
+        }
+        .screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: none; flex-direction: column; z-index: 10;
+        }
+        .screen.active { display: flex; }
+
+        .btn-glossy {
+            position: relative; border-radius: 30px; border: none;
+            box-shadow: 0 6px 10px rgba(0,0,0,0.4), inset 0 -4px 8px rgba(0,0,0,0.2);
+            color: #552200; font-weight: bold; text-align: center; cursor: pointer;
+            display: flex; justify-content: center; align-items: center;
+            transition: transform 0.1s; overflow: hidden;
+            will-change: transform;
+        }
+        .btn-glossy::after {
+            content: ''; position: absolute;
+            top: 5px; left: 5px; right: 5px; bottom: 5px;
+            border: 2px dashed rgba(255, 255, 255, 0.5); border-radius: 25px;
+            pointer-events: none;
+        }
+        .btn-glossy:active { transform: scale(0.95); }
+        .btn-orange { background: var(--fabric-light), linear-gradient(to bottom, var(--btn-orange-top), var(--btn-orange-bottom)); }
+        .btn-yellow { background: var(--fabric-light), linear-gradient(to bottom, var(--btn-yellow-top), var(--btn-yellow-bottom)); }
+
+        .status-header {
+            position: absolute; top: 10px; left: 10px; right: 10px; height: 40px;
+            display: flex; justify-content: flex-start; align-items: center;
+            padding: 0; z-index: 20; pointer-events: none;
+        }
+        .status-item {
+            display: flex; align-items: center; background: var(--fabric-dark), rgba(0,0,0,0.3);
+            border-radius: 15px; padding: 2px 10px; color: #fff; font-weight: bold;
+            font-size: 14px; border: 1.5px dashed #ffcc00;
+        }
+        .status-icon { width: 18px; height: 18px; border-radius: 50%; margin-right: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.5);}
+        .coin-icon { background: radial-gradient(#ffe066, #ff8c00); }
+        .ruby-icon { background: radial-gradient(#ff8a80, #d50000); border-radius: 3px; transform: rotate(45deg); }
+
+        /* タイトル・ホーム・コレクション・ストア */
+        #title-screen { background: radial-gradient(circle, #2abcf6, #0a2047); justify-content: center; align-items: center; }
+        #title-logo { font-size: 50px; font-weight: 900; color: #fff; -webkit-text-stroke: 2px #fff; text-shadow: 0 5px 0 #154589, 0 10px 15px rgba(0,0,0,0.6); text-align: center; line-height: 1.1; margin-bottom: 50px; }
+        #title-tap { font-size: 24px; color: #ffeb3b; font-weight: bold; animation: blink 1.2s infinite; -webkit-text-stroke: 1px #000; text-shadow: 0 3px 0 #000; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        #home-screen { background: var(--fabric-dark), linear-gradient(to bottom, #1e88e5, #0d47a1); }
+        #home-center-stage { position: absolute; top: 110px; left: 50%; transform: translateX(-50%); width: 240px; height: 240px; background: var(--fabric-light), radial-gradient(circle, rgba(255,255,255,0.3), rgba(255,255,255,0.05)); border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px dashed rgba(255,255,255,0.5); box-shadow: 0 8px 20px rgba(0,0,0,0.4), inset 0 0 20px rgba(0,0,0,0.2); }
+        #home-mytsum-img { width: 130px; height: 130px; border-radius: 50%; background-size: contain; filter: drop-shadow(0 10px 10px rgba(0,0,0,0.5)); }
+        #home-highscore-area { position: absolute; top: 380px; left: 50%; transform: translateX(-50%); text-align: center; width: 100%; }
+        #home-highscore-label { color: #b3e5fc; font-size: 16px; font-weight: bold; margin-bottom: 4px; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); }
+        #home-highscore-val { color: #fff; font-size: 38px; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); }
+        #home-bottom-area { position: absolute; bottom: 30px; left: 0; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+        #btn-play { width: 220px; height: 70px; font-size: 32px; letter-spacing: 5px; }
+        .home-sub-btns { display: flex; justify-content: space-between; align-items: center; width: 320px; }
+        #btn-save { width: 80px; height: 50px; font-size: 16px; border-radius: 15px; }
+        #btn-store { width: 80px; height: 50px; font-size: 16px; border-radius: 15px; flex-direction: column; line-height: 1.1;}
+        #btn-mytsum { width: 70px; height: 70px; border-radius: 50%; background-size: cover; box-shadow: 0 6px 10px rgba(0,0,0,0.4); cursor: pointer; position: relative; }
+        #btn-mytsum::before { content: ''; position: absolute; top: 4px; left: 4px; right: 4px; bottom: 4px; border: 2px dashed rgba(255, 255, 255, 0.5); border-radius: 50%; pointer-events: none; }
+        #home-mytsum-lv { background: #333; padding: 2px 8px; border-radius: 10px; border: 1.5px dashed white; bottom: -12px; position: absolute; color: white; font-size: 10px; font-weight: bold;}
+
+        #collection-screen { background: var(--fabric-dark), #1c4568; }
+        #col-top-half { height: 300px; display: flex; flex-direction: column; align-items: center; background: var(--fabric-light), linear-gradient(to bottom, #1c4568, #2a6f9f); padding-top: 60px; border-bottom: 3px dashed #b3e5fc; box-shadow: 0 8px 15px rgba(0,0,0,0.5); position: relative; z-index: 5; }
+        #col-preview-img { width: 120px; height: 120px; border-radius: 50%; background-size: contain; filter: drop-shadow(0 10px 10px rgba(0,0,0,0.5)); transition: filter 0.3s; }
+        #col-preview-img.locked { filter: brightness(0) drop-shadow(0 10px 10px rgba(0,0,0,0.5)); }
+        #col-tsum-name { font-size: 28px; color: #fff; font-weight: bold; margin-top: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+        #col-tsum-desc { font-size: 12px; color: #b3e5fc; margin-top: 5px; }
+        #col-bottom-half { flex-grow: 1; background: var(--fabric-dark), var(--ui-blue); padding: 15px; padding-bottom: 90px; overflow-y: auto; display: flex; flex-wrap: wrap; align-content: flex-start; gap: 12px; justify-content: center; }
+        .tsum-grid-item { width: 75px; height: 95px; background: var(--fabric-light), #1565c0; border-radius: 15px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 5px 8px rgba(0,0,0,0.4), inset 0 -3px 6px rgba(0,0,0,0.2); cursor: pointer; position: relative; }
+        .tsum-grid-item::before { content: ''; position: absolute; top: 5px; left: 5px; right: 5px; bottom: 5px; border: 2px dashed rgba(255, 255, 255, 0.5); border-radius: 10px; pointer-events: none; }
+        .tsum-grid-item.selected { background: var(--fabric-light), #1e88e5; }
+        .tsum-grid-item.selected::before { border-color: #ffeb3b; border-width: 3px; box-shadow: 0 0 10px #ffeb3b; }
+        .tsum-grid-icon { width: 60px; height: 60px; margin-top: 5px; background-size: contain; border-radius: 50%; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.4)); }
+        .tsum-grid-item.locked .tsum-grid-icon { filter: brightness(0); opacity: 0.5; }
+        .tsum-grid-lv { background: #0d47a1; color: white; font-size: 10px; padding: 2px 8px; border-radius: 10px; margin-top: 5px; font-weight: bold; border: 1px dashed rgba(255,255,255,0.5); z-index: 1; }
+        #col-footer { position: absolute; bottom: 0; left: 0; width: 100%; height: 80px; z-index: 10; background: var(--fabric-light), rgba(255,255,255,0.15); display: flex; justify-content: space-evenly; align-items: center; border-top: 3px dashed rgba(255,255,255,0.6); box-shadow: 0 -5px 15px rgba(0,0,0,0.4); }
+        #btn-back { width: 90px; height: 50px; font-size: 18px; border-radius: 25px; }
+        #btn-set-mytsum { width: 150px; height: 60px; font-size: 20px; border-radius: 30px; }
+        #btn-set-mytsum.disabled { background: var(--fabric-dark), #555; color: #aaa; pointer-events: none; }
+
+        #store-screen { background: var(--fabric-dark), linear-gradient(to bottom, #1c4568, #0a2047); align-items: center; justify-content: center; }
+        #store-title { font-size: 32px; color: #fff; font-weight: bold; text-shadow: 2px 2px 4px #000; position: absolute; top: 80px; }
+        #gacha-box-container { position: relative; width: 200px; height: 200px; display: flex; justify-content: center; align-items: center; margin-bottom: 50px; perspective: 1000px; z-index: 5; }
+        #gacha-box { width: 150px; height: 150px; background: var(--fabric-light), #ffeb3b; border-radius: 20px; box-shadow: 0 15px 25px rgba(0,0,0,0.6), inset 0 -10px 20px rgba(0,0,0,0.2); display: flex; justify-content: center; align-items: center; font-size: 40px; font-weight: bold; color: #d50000; position: relative; }
+        #gacha-box::before { content: ''; position: absolute; top: 8px; left: 8px; right: 8px; bottom: 8px; border: 2px dashed rgba(255,255,255,0.5); border-radius: 12px; pointer-events: none;}
+        .shake-anim { animation: shake 0.5s ease-in-out infinite; }
+        @keyframes shake { 0% { transform: rotate(0deg); } 25% { transform: rotate(-10deg) scale(1.1); } 50% { transform: rotate(10deg) scale(1.1); } 75% { transform: rotate(-10deg) scale(1.1); } 100% { transform: rotate(0deg); } }
+        #gacha-result { position: absolute; width: 160px; height: 160px; border-radius: 50%; background-size: contain; opacity: 0; transform: scale(0); transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); filter: drop-shadow(0 0 20px #ffeb3b); z-index: 10; }
+        #gacha-result.show { opacity: 1; transform: scale(1.5) translateY(-20px); }
+        #gacha-msg {
+            font-size: 32px; 
+            color: #ffeb3b; 
+            font-weight: 900; 
+            -webkit-text-stroke: 1.5px #000;
+            text-shadow: 0 0 10px rgba(0,0,0,0.8), 3px 3px 0 #000;
+            opacity: 0; 
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            position: absolute; 
+            top: -80px; 
+            left: 50%;
+            transform: translateX(-50%) scale(0.8);
+            white-space: nowrap;
+            z-index: 20;
+        }
+        #btn-roll-gacha { width: 240px; height: 70px; font-size: 24px; flex-direction: column; line-height: 1.2; z-index: 20;}
+        #btn-store-back { position: absolute; bottom: 20px; left: 20px; width: 80px; height: 40px; font-size: 16px; border-radius: 20px; }
+
+        /* =========================================
+           ゲーム画面：レイヤー設計
+        ========================================= */
+        #game-screen { background: var(--fabric-dark), radial-gradient(circle at center, #1e4b8f 0%, #0a1b3f 100%); z-index: 5;}
+        
+                /* 1. 背景の色をディスコ調に激しく変化させる */
+        #fever-bg-overlay { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background: linear-gradient(to bottom, #4a148c 0%, #1a237e 80%); 
+            opacity: 0; transition: opacity 0.3s; z-index: 10; pointer-events: none; 
+        }
+        #app-container.fever-active #fever-bg-overlay { 
+            opacity: 1; 
+            animation: bgPulse 1.5s infinite alternate;
+        }
+        @keyframes bgPulse {
+            0% { background: linear-gradient(to bottom, #4a148c 0%, #1a237e 80%); }
+            100% { background: linear-gradient(to bottom, #880e4f 0%, #311b92 80%); }
+        }
+
+        /* 下枠 (U字型 SVG背景) ツム・オーブの手前(z-index 35) */
+        #bottom-plate-container { position: absolute; bottom: 0; left: 0; width: 100%; height: 160px; pointer-events: none; z-index: 35; }
+        
+        /* 2. フィーバーネオン: 左右から上下に動くスポットライト演出 */
+        #fever-frame { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            pointer-events: none; opacity: 0; z-index: 25; 
+            transition: opacity 0.3s; overflow: hidden;
+            mix-blend-mode: screen; /* 重なった部分が明るく発光する */
+        }
+        #app-container.fever-active #fever-frame { 
+            opacity: 1; 
+        }
+        
+                        /* 左からのピンクのスポットライト */
+        #fever-frame::before {
+            content: '';
+            position: absolute;
+            top: 25%; left: -50px;
+            width: 150%; height: 260px; /* 変更：200pxから260pxに広げて幅を少し大きく */
+            /* 変更：中心(0%)を白にし、少し透明度を下げてマイルドなピンクに */
+            background: radial-gradient(ellipse at left, rgba(255, 255, 255, 0.8) 0%, rgba(255, 0, 222, 0.4) 25%, rgba(255, 0, 222, 0.15) 60%, transparent 70%);
+            transform-origin: left center;
+            animation: spotLeft 2s ease-in-out infinite alternate;
+        }
+        
+        /* 右からの水色のスポットライト */
+        #fever-frame::after {
+            content: '';
+            position: absolute;
+            top: 30%; right: -50px;
+            width: 150%; height: 260px; /* 変更：200pxから260pxに広げて幅を少し大きく */
+            /* 変更：中心(0%)を白にし、少し透明度を下げてマイルドな水色に */
+            background: radial-gradient(ellipse at right, rgba(255, 255, 255, 0.8) 0%, rgba(0, 229, 255, 0.4) 25%, rgba(0, 229, 255, 0.15) 60%, transparent 70%);
+            transform-origin: right center;
+            animation: spotRight 2.3s ease-in-out infinite alternate;
+        }
+
+
+        /* スポットライトが上下に首を振るアニメーション */
+        @keyframes spotLeft {
+            0% { transform: rotate(20deg); }
+            100% { transform: rotate(-50deg); }
+        }
+        @keyframes spotRight {
+            0% { transform: rotate(-25deg); }
+            100% { transform: rotate(45deg); }
+        }
+
+
+        /* 以前の重い光の粒は完全に非表示にして無効化 */
+        .fever-sparkle { display: none; }
+
+        .sp1 { width: 6px; height: 6px; top: 20%; left: 5%; box-shadow: 0 0 6px #ff00de; animation-delay: 0s; }
+        .sp2 { width: 8px; height: 8px; top: 28%; right: 6%; box-shadow: 0 0 8px #00e5ff; animation-delay: 0.3s; }
+        .sp3 { width: 5px; height: 5px; top: 45%; left: 8%; box-shadow: 0 0 5px #ffea00; animation-delay: 0.7s; }
+        .sp4 { width: 7px; height: 7px; top: 55%; right: 4%; box-shadow: 0 0 7px #ff00de; animation-delay: 0.2s; }
+        .sp5 { width: 9px; height: 9px; top: 68%; left: 7%; box-shadow: 0 0 9px #00e5ff; animation-delay: 0.5s; }
+        .sp6 { width: 6px; height: 6px; top: 78%; right: 9%; box-shadow: 0 0 6px #ffea00; animation-delay: 0.8s; }
+        .sp7 { width: 8px; height: 8px; top: 85%; left: 25%; box-shadow: 0 0 8px #ff00de; animation-delay: 0.1s; }
+        .sp8 { width: 5px; height: 5px; top: 88%; right: 25%; box-shadow: 0 0 5px #00e5ff; animation-delay: 0.6s; }
+        .sp9 { width: 7px; height: 7px; top: 90%; left: 50%; box-shadow: 0 0 7px #ffea00; animation-delay: 0.4s; }
+        .sp10 { width: 6px; height: 6px; top: 15%; right: 15%; box-shadow: 0 0 6px #ff00de; animation-delay: 0.9s; }
+        .sp11 { width: 5px; height: 5px; top: 82%; left: 15%; box-shadow: 0 0 5px #00e5ff; animation-delay: 0.25s; }
+        .sp12 { width: 7px; height: 7px; top: 83%; right: 12%; box-shadow: 0 0 7px #ffea00; animation-delay: 0.75s; }
+
+        /* --- ツム描画 (z-index 30) --- */
+        #game-canvas { position: absolute; top: 0; left: 0; pointer-events: auto; touch-action: none; z-index: 30; }
+        
+        /* エフェクト描画 (z-index 31) */
+        #ui-canvas { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 31; }
+        
+        /* UIレイヤー (一番手前 z-index 40) */
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 40; }
+
+        /* トップバー */
+        #top-bar { position: relative; width: 100%; height: 95px; display: flex; justify-content: space-between; padding: 5px 15px 0 15px; box-sizing: border-box; pointer-events: auto;}
+        
+        /* タイマー円形装飾 (暗い色→明るい線、時計回り) */
+        #timer-ring { width: 64px; height: 64px; border-radius: 50%; background: rgba(0,0,0,0.7); border: 4px solid #b3e5fc; display: flex; justify-content: center; align-items: center; position: relative;}
+        #timer-svg { position: absolute; top: -4px; left: -4px; width: 72px; height: 72px; transform: rotate(-90deg); pointer-events: none;}
+        #timer-circle { fill: none; stroke: #00e5ff; stroke-width: 6; stroke-dasharray: 201; stroke-dashoffset: 0;  }
+        #time-box { font-size: 30px; font-weight: bold; color: #fff; text-shadow: 1px 1px 2px #000; position: relative; z-index: 10;}
+        
+        /* スコアエリア */
+        #score-area { display: flex; flex-direction: column; align-items: flex-end; gap: 0px; margin-top: -3px; margin-right: 55px; }
+        #score-bar { background: rgba(0,0,0,0.2); padding: 0px 15px; min-width: 155px; border-radius: 20px; color: #fff; font-size: 20px; font-weight: bold; display: flex; align-items: center; justify-content: flex-end; border: 2px dashed rgba(255,255,255,0.5); box-shadow: inset 0 2px 5px rgba(0,0,0,0.3); box-sizing: border-box;}
+        #score-val { font-size: 22px; color: #fff; text-shadow: 1px 1px 2px #000; letter-spacing: 1px;}
+        #game-coin-bar { 
+        display: flex; align-items: center; justify-content: center; 
+        background: rgba(0,0,0,0.2); padding: 2px 10px; border-radius: 20px; 
+        border: 2px dashed rgba(255,255,255,0.5); box-shadow: inset 0 2px 5px rgba(0,0,0,0.3);
+        margin-top: 1px; box-sizing: border-box; width: auto; min-width: 80px;
+    }
+        #game-coin-val { font-size: 18px; color: #ffeb3b; font-weight: bold; }
+
+        /* ポーズボタン */
+        #pause-btn { position: absolute; top: 10px; right: 15px; width: 40px; height: 40px; background: rgba(0,0,0,0.3); border: 2px dashed rgba(255,255,255,0.5); border-radius: 10px; display: flex; justify-content: center; align-items: center; cursor: pointer; pointer-events: auto; }
+        #pause-btn::before, #pause-btn::after { content: ''; width: 6px; height: 20px; background: #fff; border-radius: 3px; margin: 0 2px; }
+        
+        /* スキル・ファンボタン、ゲージ */
+        #skill-btn-wrapper { position: absolute; bottom: 50px; left: 20px; width: 90px; height: 90px; border-radius: 50%; background: var(--fabric-dark), #111; pointer-events: auto; cursor: pointer; display: flex; justify-content: center; align-items: center; box-shadow: 0 5px 15px rgba(0,0,0,0.5);}
+        #skill-btn-wrapper::before { content: ''; position: absolute; top: 3px; left: 3px; right: 3px; bottom: 3px; border: 2px dashed rgba(255,255,255,0.5); border-radius: 50%; pointer-events: none; z-index: 5;}
+        
+        /* スキルアイコン (透過) */
+        #skill-icon { width: 76px; height: 76px; border-radius: 50%; background-color: transparent; z-index: 2; background-size: cover; background-position: center; background-repeat: no-repeat;}
+        #skill-btn-wrapper.ready { border-color: #ffcc00; box-shadow: 0 0 20px #ffcc00; animation: pulse 1s infinite; }
+        
+        #fan-btn-wrapper { position: absolute; bottom: 50px; right: 20px; width: 86px; height: 86px; border-radius: 50%; background: var(--fabric-light), radial-gradient(circle at 30% 30%, #ffe066, #f57c00); pointer-events: auto; cursor: pointer; display: flex; justify-content: center; align-items: center; box-shadow: 0 5px 15px rgba(0,0,0,0.5), inset 0 0 15px #d84315; }
+        #fan-btn-wrapper::before { content: ''; position: absolute; top: 3px; left: 3px; right: 3px; bottom: 3px; border: 2px dashed rgba(255,255,255,0.5); border-radius: 50%; pointer-events: none; z-index: 5;}
+        #fan-btn-wrapper:active { transform: scale(0.95); }
+        .fan-blade { fill: #b71c1c; }
+        
+        #fever-container { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); width: 180px; height: 24px; background: rgba(0,0,0,0.3); border-radius: 12px; border: 2px solid #005bb5; overflow: hidden; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);}
+        #app-container.fever-active #fever-container { box-shadow: 0 0 15px #ffeb3b; border-color: #ffeb3b; border-style: solid;}
+        #fever-bar { position: absolute; left: 0; top: 0; width: 0%; height: 100%; background: linear-gradient(to bottom, #ffeb3b, #ff9800); z-index: 1; }
+        #fever-text { position: relative; z-index: 2; color: rgba(255,255,255,0.5); font-weight: bold; font-size: 14px; letter-spacing: 5px; }
+
+        #combo-container { position: absolute; top: 110px; right: 20px; text-align: center; opacity: 0; transition: opacity 0.2s; will-change: transform, opacity; }
+        #combo-val { font-size: 42px; line-height: 1; color: #00d4ff; font-weight: bold; -webkit-text-stroke: 1px #fff; }
+        #combo-text { font-size: 14px; color: #fff; font-weight: bold; }
+        
+        #center-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 50px; font-weight: bold; color: #ffeb3b; text-shadow: 2px 2px 0 #d50000, -2px -2px 0 #d50000; opacity: 0; transition: opacity 0.3s, transform 0.3s; white-space: nowrap; pointer-events: none; z-index: 100;}
+        .text-ready { opacity: 1 !important; transform: translate(-50%, -50%) scale(1) !important; color: #ffeb3b !important; }
+        .text-go { opacity: 1 !important; transform: translate(-50%, -50%) scale(1.6) !important; color: #fff !important; text-shadow: 3px 3px 0 #ff007f, -3px -3px 0 #ff007f, 0 0 20px #ffea00 !important; }
+
+        /* オーバーレイ系 (最前面 z-index 200+) */
+        #pause-overlay, #result-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.7); z-index: 200; display: none; flex-direction: column; justify-content: center; align-items: center; pointer-events: auto; }
+        .popup-box { background: var(--fabric-light), #2abcf6; border: none; border-radius: 20px; padding: 30px; text-align: center; box-shadow: 0 15px 30px rgba(0,0,0,0.7), inset 0 -5px 15px rgba(0,0,0,0.2); position: relative;}
+        .popup-box::before { content: ''; position: absolute; top: 8px; left: 8px; right: 8px; bottom: 8px; border: 2px dashed rgba(255,255,255,0.5); border-radius: 12px; pointer-events: none; }
+    
+        /* ガチャ強化演出 */
+        #gacha-box-container { perspective: 1000px; }
+        .shake-intense { animation: shakeIntense 0.1s infinite; }
+        @keyframes shakeIntense {
+            0% { transform: translate(2px, 1px) rotate(0deg); }
+            20% { transform: translate(-1px, -2px) rotate(-2deg); }
+            40% { transform: translate(-3px, 0px) rotate(3deg); }
+            60% { transform: translate(3px, 2px) rotate(0deg); }
+            80% { transform: translate(1px, -1px) rotate(2deg); }
+            100% { transform: translate(-1px, 2px) rotate(-1deg); }
+        }
+        
+        #gacha-radiance {
+            position: absolute; top: 50%; left: 50%;
+            width: 1000px; height: 1000px;
+            transform: translate(-50%, -50%) rotate(0deg);
+            background: conic-gradient(from 0deg, transparent, rgba(255,255,100,0.4) 15deg, transparent 30deg, transparent 45deg, rgba(255,255,100,0.4) 60deg, transparent 75deg, transparent 90deg, rgba(255,255,100,0.4) 105deg, transparent 120deg, transparent 135deg, rgba(255,255,100,0.4) 150deg, transparent 165deg, transparent 180deg, rgba(255,255,100,0.4) 195deg, transparent 210deg, transparent 225deg, rgba(255,255,100,0.4) 240deg, transparent 255deg, transparent 270deg, rgba(255,255,100,0.4) 285deg, transparent 300deg, transparent 315deg, rgba(255,255,100,0.4) 330deg, transparent 345deg, transparent 360deg);
+            /* mask-image は不安定なため、明確にピクセルとパーセンテージを組み合わせた指定に統一。500pxの半径で1000pxの円 */
+            -webkit-mask-image: radial-gradient(circle at center, black 0%, black 20%, transparent 60%);
+            mask-image: radial-gradient(circle at center, black 0%, black 20%, transparent 60%);
+            border-radius: 50%; /* 四角く切り取られるのを防ぐため念のため円形に */
+            opacity: 0; pointer-events: none; z-index: 0;
+            transition: opacity 0.5s;
+        }
+        .radiance-active { opacity: 1 !important; animation: rotateRadiance 6s linear infinite; }
+                @keyframes rotateRadiance { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
+
+
+        #gacha-flash {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #fff; opacity: 0; pointer-events: none; z-index: 100;
+        }
+        @keyframes flashAnim { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }
+
+        .gacha-particle { position: absolute; width: 8px; height: 8px; background: #fff; border-radius: 50%; box-shadow: 0 0 10px #ffeb3b, 0 0 20px #ffeb3b; z-index: 15; pointer-events: none; } .gacha-star {
+            position: absolute; width: 15px; height: 15px; background: #ffeb3b;
+            clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+            z-index: 15; pointer-events: none;
+        }
+        @keyframes starPop {
+            0% { transform: scale(0) rotate(0deg); opacity: 1; }
+            100% { transform: scale(1.2) rotate(360deg); opacity: 0; }
+        }
+
+        /* ★追加：スキルカットイン演出 */
+        #skill-cutin-overlay {
+            position: absolute; top:0; left:0; width:100%; height:100%; 
+            background: rgba(0,0,0,0.7); z-index: 150; 
+            display: none; align-items: center; justify-content: center; pointer-events: none;
+        }
+        #skill-cutin-img {
+            width: 220px; height: 220px; 
+            background-size: contain; background-repeat: no-repeat; background-position: center; 
+            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.8));
+            position: relative; z-index: 10; /* 後光より手前に表示 */
+        }
+        /* ★追加：スキルの後光 */
+        #skill-cutin-radiance {
+            position: absolute; top: 50%; left: 50%;
+            width: 800px; height: 800px;
+            transform: translate(-50%, -50%) rotate(0deg);
+            background: conic-gradient(from 0deg, transparent, rgba(255,255,255,0.7) 15deg, transparent 30deg, transparent 45deg, rgba(255,255,255,0.7) 60deg, transparent 75deg, transparent 90deg, rgba(255,255,255,0.7) 105deg, transparent 120deg, transparent 135deg, rgba(255,255,255,0.7) 150deg, transparent 165deg, transparent 180deg, rgba(255,255,255,0.7) 195deg, transparent 210deg, transparent 225deg, rgba(255,255,255,0.7) 240deg, transparent 255deg, transparent 270deg, rgba(255,255,255,0.7) 285deg, transparent 300deg, transparent 315deg, rgba(255,255,255,0.7) 330deg, transparent 345deg, transparent 360deg);
+            -webkit-mask-image: radial-gradient(circle at center, black 0%, black 20%, transparent 60%);
+            mask-image: radial-gradient(circle at center, black 0%, black 20%, transparent 60%);
+            border-radius: 50%;
+            opacity: 0; pointer-events: none; z-index: 1;
+            transition: opacity 0.3s;
+        }
+        .anim-skill-drop {
+            animation: skillDrop 0.6s ease-out forwards;
+        }
+        .anim-skill-pop {
+            animation: skillPopOut 0.4s ease-out forwards;
+        }
+        @keyframes skillDrop {
+            0% { transform: translateY(-500px) scale(0.6) rotate(-10deg); opacity: 0; }
+            60% { transform: translateY(30px) scale(1.1) rotate(5deg); opacity: 1; }
+            80% { transform: translateY(-15px) scale(0.95) rotate(-2deg); opacity: 1; }
+            100% { transform: translateY(0) scale(1.0) rotate(0deg); opacity: 1; }
+        }
+        @keyframes skillPopOut {
+            0% { transform: scale(1.0); opacity: 1; }
+            100% { transform: scale(1.8); opacity: 0; filter: drop-shadow(0 0 30px rgba(255,255,100,1)); }
+        }
+</style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div id="app-container">
+    <div id="title-screen" class="screen active"><div id="title-logo">REAL<br>TSUM<br>CLONE</div><div id="title-tap">TAP TO START</div></div>
+    
+    <div id="home-screen" class="screen">
+        <div class="status-header"><div class="status-item"><div class="status-icon coin-icon"></div> <span id="home-coin-val">0</span></div></div>
+        <div id="home-center-stage"><div id="home-mytsum-img"></div><div style="color:#fff; font-weight:bold; margin-top:10px; font-size:20px; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);" id="home-mytsum-name">マイツム</div></div>
+        <div id="home-highscore-area"><div id="home-highscore-label">今週のハイスコア</div><div id="home-highscore-val">0</div></div>
+        <div id="home-bottom-area">
+            <div class="home-sub-btns"><div id="btn-save" class="btn-glossy btn-yellow">セーブ</div><div id="btn-mytsum"><div id="home-mytsum-lv">Lv.1</div></div><div id="btn-store" class="btn-glossy btn-orange"><span>ストア</span><span style="font-size:10px;">(ガチャ)</span></div></div>
+            <div id="btn-play" class="btn-glossy btn-orange">プレイ</div>
+        </div>
+    </div>
+    
+    <div id="collection-screen" class="screen">
+        <div class="status-header"><div class="status-item"><div class="status-icon coin-icon"></div> <span id="col-coin-val">0</span></div></div>
+        <div id="col-top-half"><div id="col-preview-img"></div><div id="col-tsum-name">名前</div><div id="col-tsum-desc">スキル説明</div></div>
+        <div id="col-bottom-half"></div>
+        <div id="col-footer"><div id="btn-back" class="btn-glossy btn-yellow">もどる</div><div id="btn-set-mytsum" class="btn-glossy btn-orange">マイツムセット</div></div>
+    </div>
+    
+    <div id="store-screen" class="screen">
+        <div class="status-header"><div class="status-item"><div class="status-icon coin-icon"></div> <span id="store-coin-val">0</span></div></div>
+        <div id="store-title">プレミアムBOX</div>
+        <div id="gacha-radiance"></div>
+        <div id="gacha-box-container"><div id="gacha-box">BOX</div><div id="gacha-flash"></div><div id="gacha-result"></div><div id="gacha-msg">ゲット！</div></div>
+        <div id="btn-roll-gacha" class="btn-glossy btn-yellow"><div>BOXを引く</div><div style="font-size: 14px; display:flex; align-items:center; justify-content:center; margin-top:5px;"><div class="status-icon coin-icon" style="width:14px; height:14px;"></div> 500</div></div>
+        <div id="btn-store-back" class="btn-glossy btn-orange">もどる</div>
+    </div>
+    
+    <div id="game-screen" class="screen">
+        <div id="fever-bg-overlay"></div>
+        
+        <div id="bottom-plate-container">
+            <svg viewBox="0 0 375 160" preserveAspectRatio="none" style="width:100%; height:100%;">
+                <defs>
+                    <linearGradient id="bottomGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#2abcf6" />
+                        <stop offset="100%" stop-color="#0099cc" />
+                    </linearGradient>
+                    <pattern id="fabricBottom" width="4" height="4" patternUnits="userSpaceOnUse">
+                        <path d="M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+                        <path d="M-1,3 l2,2 M0,0 l4,4 M3,-1 l2,2" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+                    </pattern>
+                </defs>
+                <path d="M0,10 Q187.5,60 375,10 V160 H0 Z" fill="url(#bottomGrad)"/>
+                <path d="M0,10 Q187.5,60 375,10 V160 H0 Z" fill="url(#fabricBottom)"/>
+                <path d="M4,16 Q187.5,64 371,16" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-dasharray="6,4"/>
+            </svg>
+        </div>
+
+        <div id="fever-frame">
+            <div class="fever-sparkle sp1"></div><div class="fever-sparkle sp2"></div><div class="fever-sparkle sp3"></div>
+            <div class="fever-sparkle sp4"></div><div class="fever-sparkle sp5"></div><div class="fever-sparkle sp6"></div>
+            <div class="fever-sparkle sp7"></div><div class="fever-sparkle sp8"></div><div class="fever-sparkle sp9"></div>
+            <div class="fever-sparkle sp10"></div><div class="fever-sparkle sp11"></div><div class="fever-sparkle sp12"></div>
+        </div>
+
+        <canvas id="game-canvas" width="375" height="667"></canvas>
+        
+        <canvas id="ui-canvas" width="375" height="667"></canvas>
+        
+        <div id="ui-layer">
+            
+            <div id="top-bar">
+                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 95px; z-index: -1; filter: drop-shadow(0 5px 5px rgba(0,0,0,0.4));">
+                    <svg viewBox="0 0 375 95" preserveAspectRatio="none" style="width:100%; height:100%;">
+                        <defs>
+                            <linearGradient id="topGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#2abcf6" />
+                                <stop offset="100%" stop-color="#0099cc" />
+                            </linearGradient>
+                            <pattern id="fabricTop" width="4" height="4" patternUnits="userSpaceOnUse">
+                                <path d="M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+                                <path d="M-1,3 l2,2 M0,0 l4,4 M3,-1 l2,2" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+                            </pattern>
+                        </defs>
+                        <path d="M0,0 H375 V75 Q187.5,110 0,75 Z" fill="url(#topGrad)"/>
+                        <path d="M0,0 H375 V75 Q187.5,110 0,75 Z" fill="url(#fabricTop)"/>
+                        <path d="M4,73 Q187.5,104 371,73" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-dasharray="6,4"/>
+                    </svg>
+                </div>
+                
+                <div id="timer-ring-wrap" style="pointer-events: auto;">
+                    <div id="timer-ring">
+                        <svg id="timer-svg" viewBox="0 0 72 72">
+                            <circle cx="36" cy="36" r="32" fill="none" stroke="rgba(0,0,0,0.6)" stroke-width="6" />
+                            <circle id="timer-circle" cx="36" cy="36" r="32" fill="none" stroke="#00e5ff" stroke-width="6" stroke-dasharray="201" stroke-dashoffset="0" style="" />
+                        </svg>
+                        <div id="time-box">60</div>
+                    </div>
+                </div>
+                <div id="score-area" style="pointer-events: auto;">
+                    <div id="score-bar"><span id="score-val">0</span></div>
+                    <div id="game-coin-bar"><div class="status-icon coin-icon"></div> <span id="game-coin-val">0</span></div>
+                </div>
+                <div id="pause-btn" style="pointer-events: auto;"></div>
+            </div>
+            
+            <div id="combo-container"><div id="combo-val">0</div><div id="combo-text">COMBO</div></div>
+            <div id="center-text"></div>
+            
+            <div id="skill-btn-wrapper">
+                <svg id="skill-gauge-svg" viewBox="0 0 90 90" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:1; pointer-events:none;">
+                    <path id="skill-gauge" fill="#ffcc00" d="M45,45 L45,0 A45,45 0 0,1 45,0 Z" />
+                </svg>
+                <div id="skill-icon"></div>
+            </div>
+            
+            <div id="fan-btn-wrapper">
+                <img src="Fan.png" style="width: 70%; height: 70%; object-fit: contain; transform: rotate(45deg); pointer-events: none;" />
+            </div>
+
+            <div id="fever-container"><div id="fever-bar"></div><div id="fever-text">FEVER</div></div>
+        </div>
+        
+        <div id="pause-overlay">
+            <div class="popup-box">
+                <h2 style="color:white; margin:0; text-shadow: 1px 1px 2px #000;">PAUSE</h2>
+                <div style="display: flex; flex-direction: column; gap: 15px; margin-top: 20px;">
+                    <div id="btn-resume" class="btn-glossy btn-yellow" style="width:160px; height:50px; font-size:20px;">再開</div>
+                    <div id="btn-restart" class="btn-glossy btn-orange" style="width:160px; height:50px; font-size:20px;">リセット</div>
+                    <div id="btn-quit" class="btn-glossy btn-orange" style="width:160px; height:50px; font-size:20px;">ホーム</div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="result-overlay">
+            <div class="popup-box">
+                <h2 style="color:white; margin:0; text-shadow: 1px 1px 2px #000;">TIME UP!</h2>
+                <div id="result-score" style="font-size: 40px; color: #ffeb3b; font-weight: bold; -webkit-text-stroke: 1px #000; margin: 10px 0;">0</div>
+                <div style="color:white; font-weight:bold; text-shadow: 1px 1px 2px #000;">獲得コイン: <span id="result-coins" style="color:#ffeb3b;">0</span></div>
+                <div id="btn-result-ok" class="btn-glossy btn-orange" style="width:120px; height:50px; font-size:20px; margin-top:20px; z-index:10;">OK</div>
+            </div>
+
+        </div>
+        
+        <div id="skill-cutin-overlay">
+            <div id="skill-cutin-radiance"></div>
+            <div id="skill-cutin-img"></div>
+        </div>
+    </div>
+</div>
+
+<audio id="bgm-home" src="bgm_home.mp3" loop></audio>
+<audio id="bgm-game" src="bgm_game.mp3" loop></audio>
+<audio id="bgm-fever" src="bgm_fever.mp3" loop></audio>
+
+        <div id="save-overlay" style="position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.85); z-index: 300; display: none; flex-direction: column; justify-content: center; align-items: center; pointer-events: auto;">
+            <div class="popup-box" style="width: 80%; max-width: 320px; padding: 25px 20px;">
+                <h2 style="color:white; margin:0 0 15px 0; text-shadow: 1px 1px 2px #000;">データ引き継ぎ</h2>
+                
+                <div style="background: rgba(0,0,0,0.3); border-radius: 10px; padding: 10px; margin-bottom: 15px;">
+                    <div style="color: #ffeb3b; font-size: 14px; font-weight: bold; margin-bottom: 5px;">【エクスポート】</div>
+                    <div style="font-size: 11px; color: #fff; margin-bottom: 5px; text-align: left;">現在のデータを暗号化してコピーします。</div>
+                    <textarea id="export-textarea" readonly style="width: 100%; height: 50px; resize: none; font-size: 10px; border-radius: 5px; border: 1px solid #ccc; background: #eee; color: #333; margin-bottom: 5px;"></textarea>
+                    <div id="btn-copy-save" class="btn-glossy btn-yellow" style="width: 100%; height: 35px; font-size: 14px;">コピーする</div>
+                    <div id="copy-msg" style="color: #ffeb3b; font-size: 12px; height: 14px; margin-top: 5px; opacity: 0; transition: opacity 0.3s;">コピーしました！</div>
+                </div>
+
+                <div style="background: rgba(0,0,0,0.3); border-radius: 10px; padding: 10px; margin-bottom: 15px;">
+                    <div style="color: #00e5ff; font-size: 14px; font-weight: bold; margin-bottom: 5px;">【インポート】</div>
+                    <div style="font-size: 11px; color: #fff; margin-bottom: 5px; text-align: left;">コピーした文字列を貼り付けてください。</div>
+                    <textarea id="import-textarea" style="width: 100%; height: 50px; resize: none; font-size: 10px; border-radius: 5px; border: 1px solid #ccc; background: #fff; color: #333; margin-bottom: 5px;" placeholder="ここに貼り付け..."></textarea>
+                    <div id="btn-apply-save" class="btn-glossy btn-orange" style="width: 100%; height: 35px; font-size: 14px;">データを復元</div>
+                    <div id="import-msg" style="color: #ffeb3b; font-size: 12px; height: 14px; margin-top: 5px; opacity: 0; transition: opacity 0.3s;"></div>
+                </div>
+
+                <div id="btn-close-save" class="btn-glossy btn-yellow" style="width: 120px; height: 40px; font-size: 16px; margin: 0 auto;">閉じる</div>
+            </div>
+        </div>
+    
+<script>
+let currentGame = null; let isGachaRolling = false;
+function createDummyImage(color, text) { const canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 64; const ctx = canvas.getContext('2d'); ctx.fillStyle = color; ctx.beginPath(); ctx.arc(32, 32, 31, 0, Math.PI * 2); ctx.fill(); const grad = ctx.createRadialGradient(25, 25, 5, 32, 32, 32); grad.addColorStop(0, 'rgba(255,255,100,0.4)'); grad.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = grad; ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 2; ctx.stroke(); if (text) { ctx.fillStyle = 'white'; ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.strokeStyle = 'black'; ctx.lineWidth = 3; ctx.strokeText(text, 32, 32); ctx.fillText(text, 32, 32); } return canvas.toDataURL('image/png'); }
+const TSUM_DB = { 
+'tsum_1': { id: 'tsum_1', name: 'ふゆかさん', color: '#333333', desc: '画面中央のツムを消すよ！', b64: 'ふゆかさん.png' ,imgWidth: 200 ,visualRatio: 1.2 }, 
+'tsum_2': { id: 'tsum_2', name: 'まねおと', color: '#448aff', desc: '1コでもツムが消せるよ！', b64: 'まねおと.png' ,imgWidth: 200 ,visualRatio: 1.2}, 
+'tsum_3': { id: 'tsum_3', name: 'プー風', color: '#ffc107', desc: '少しの間、時間が止まるよ！', b64: createDummyImage('#ffc107', 'P') }, 
+'tsum_4': { id: 'tsum_4', name: 'エイリアン風', color: '#8bc34a', desc: 'ツムを上に投げるよ！', b64: createDummyImage('#8bc34a', 'A') }, 
+'tsum_5': { id: 'tsum_5', name: 'ロッツォ風', color: '#e91e63', desc: '画面下のツムを消すよ！', b64: createDummyImage('#e91e63', 'L') }, 
+'tsum_6': { id: 'tsum_6', name: 'マリー風', color: '#ffffff', desc: 'ボムが発生するよ！', b64: createDummyImage('#fff', 'Ma') }, 
+'tsum_7': { id: 'tsum_7', name: 'スティッチ風', color: '#3f51b5', desc: '縦ライン状にツムを消すよ！', b64: createDummyImage('#3f51b5', 'S') }, 
+'tsum_8': { id: 'tsum_8', name: 'エルサ風', color: '#00bcd4', desc: 'ツムを凍らせて消せるよ！', b64: createDummyImage('#00bcd4', 'E') }, 
+'tsum_9': { id: 'tsum_9', name: 'チップ風', color: '#795548', desc: '横ライン状にツムを消すよ！', b64: createDummyImage('#795548', 'C') }, 
+'tsum_10': { id: 'tsum_10', name: 'デール風', color: '#d7ccc8', desc: 'チップと一緒に消せるよ！', b64: createDummyImage('#d7ccc8', 'Da') }, 
+'tsum_11': { id: 'tsum_11', name: 'つげやまさん', color: '#4caf50', desc: '残り時間を少し引き延ばすよ！', b64: 'つげやまさん.png' ,imgWidth: 200 ,visualRatio: 1.2}, 
+'tsum_12': { id: 'tsum_12', name: 'しゅんくん', color: '#9c27b0', desc: '画面に多いツムに変装するよ！', b64: 'しゅんくん.png' ,imgWidth: 200 ,visualRatio: 1.2}
+ };
+const BOMB_IMG = createDummyImage('#222', 'BOMB'); const TYPES_ARRAY = Object.keys(TSUM_DB);
+const INITIAL_OWNED = { 'tsum_1': 1, 'tsum_2': 1, 'tsum_3': 1, 'tsum_4': 1, 'tsum_5': 1 };
+const GLOBAL_STATE = { coins: 1000, myTsumId: 'tsum_1', highScore: 0, ownedTsums: { ...INITIAL_OWNED }, selectedCollectionId: 'tsum_1' };
+
+function loadData() {
+    try { const saved = localStorage.getItem('realTsumCloneData'); if (saved) { const data = JSON.parse(saved); if (data.coins !== undefined) GLOBAL_STATE.coins = data.coins; if (data.myTsumId) GLOBAL_STATE.myTsumId = data.myTsumId; if (data.highScore !== undefined) GLOBAL_STATE.highScore = data.highScore; if (data.ownedTsums && typeof data.ownedTsums === 'object') { GLOBAL_STATE.ownedTsums = data.ownedTsums; } } } catch (e) {}
+    if (!GLOBAL_STATE.ownedTsums || typeof GLOBAL_STATE.ownedTsums !== 'object') GLOBAL_STATE.ownedTsums = { ...INITIAL_OWNED };
+    if (!GLOBAL_STATE.ownedTsums['tsum_1']) GLOBAL_STATE.ownedTsums['tsum_1'] = 1;
+    if (!TSUM_DB[GLOBAL_STATE.myTsumId]) GLOBAL_STATE.myTsumId = 'tsum_1';
+    GLOBAL_STATE.selectedCollectionId = GLOBAL_STATE.myTsumId;
+}
+function saveData() { try { localStorage.setItem('realTsumCloneData', JSON.stringify({ coins: GLOBAL_STATE.coins, myTsumId: GLOBAL_STATE.myTsumId, highScore: GLOBAL_STATE.highScore, ownedTsums: GLOBAL_STATE.ownedTsums })); } catch (e) {} }
+
+let audioCtx = null, audioUnlocked = false;
+
+// BGM管理システム
+const BGM = {
+    home: document.getElementById('bgm-home'),
+    game: document.getElementById('bgm-game'),
+    fever: document.getElementById('bgm-fever'),
+    current: null,
+    
+    play: function(trackName, fromStart = true) {
+        if (this.current === this[trackName]) return;
+        
+        if (this.current) {
+            this.current.pause();
+        }
+        
+        if (this[trackName]) {
+            this.current = this[trackName];
+            if (fromStart) {
+                this.current.currentTime = 0;
+            }
+            this.current.play().catch(e => console.log(e));
+        }
+    },
+    stop: function() {
+        if (this.current) {
+            this.current.pause();
+            this.current.currentTime = 0; 
+            this.current = null;
+        }
+    },
+    pause: function() { if (this.current) this.current.pause(); },
+    resume: function() { if (this.current) this.current.play().catch(e=>console.log(e)); }
+};
+
+
+function initAudio() {
+
+    if (audioUnlocked) { return; }
+    try {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (AC) { 
+            audioCtx = new AC(); 
+            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); 
+            gain.gain.value = 0; osc.connect(gain); gain.connect(audioCtx.destination); 
+            osc.start(0); osc.stop(audioCtx.currentTime + 0.01); 
+        }
+        
+        if (BGM.home) BGM.home.load();
+        if (BGM.game) BGM.game.load();
+        if (BGM.fever) BGM.fever.load();
+
+        audioUnlocked = true;
+    } catch(e) {}
+}
+
+
+const DOM_CACHE = { homeCoin: document.getElementById('home-coin-val'), colCoin: document.getElementById('col-coin-val'), storeCoin: document.getElementById('store-coin-val'), homeHigh: document.getElementById('home-highscore-val'), homeMyImg: document.getElementById('home-mytsum-img'), homeMyName: document.getElementById('home-mytsum-name'), btnMyTsum: document.getElementById('btn-mytsum'), homeMyLv: document.getElementById('home-mytsum-lv'), skillIcon: document.getElementById('skill-icon') };
+
+
+function showScreen(screenId) { 
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); 
+    document.getElementById(screenId).classList.add('active'); 
+    updateGlobalUI(); 
+    if (screenId === 'home-screen' || screenId === 'collection-screen' || screenId === 'store-screen') {
+        BGM.play('home');
+    }
+}
+
+function updateGlobalUI() {
+    const cs = GLOBAL_STATE.coins.toLocaleString(); 
+    if(DOM_CACHE.homeCoin) DOM_CACHE.homeCoin.innerText = cs; if(DOM_CACHE.colCoin) DOM_CACHE.colCoin.innerText = cs; if(DOM_CACHE.storeCoin) DOM_CACHE.storeCoin.innerText = cs; if(DOM_CACHE.homeHigh) DOM_CACHE.homeHigh.innerText = GLOBAL_STATE.highScore.toLocaleString();
+    const my = TSUM_DB[GLOBAL_STATE.myTsumId] || TSUM_DB['tsum_1']; const lv = GLOBAL_STATE.ownedTsums[my.id] || 1;
+    if(DOM_CACHE.homeMyImg) DOM_CACHE.homeMyImg.style.backgroundImage = `url(${my.b64})`; if(DOM_CACHE.homeMyName) DOM_CACHE.homeMyName.innerText = my.name; if(DOM_CACHE.btnMyTsum) DOM_CACHE.btnMyTsum.style.backgroundImage = `url(${my.b64})`; if(DOM_CACHE.homeMyLv) DOM_CACHE.homeMyLv.innerText = `Lv.${lv}`;
+    if(DOM_CACHE.skillIcon) DOM_CACHE.skillIcon.style.backgroundImage = `url(${my.b64})`;
+}
+
+function renderCollection(shouldScroll = false) { 
+        const grid = document.getElementById('col-bottom-half'); 
+        grid.innerHTML = ''; 
+        let selEl = null; 
+        TYPES_ARRAY.forEach(id => { 
+            const t = TSUM_DB[id], isO = GLOBAL_STATE.ownedTsums.hasOwnProperty(id), lv = isO ? GLOBAL_STATE.ownedTsums[id] : '?'; 
+            const item = document.createElement('div'); 
+            item.className = 'tsum-grid-item' + (id === GLOBAL_STATE.selectedCollectionId ? ' selected' : '') + (!isO ? ' locked' : ''); 
+            item.innerHTML = `<div class="tsum-grid-icon" style="background-image: url(${t.b64})"></div><div class="tsum-grid-lv">Lv.${lv}</div>`; 
+            item.addEventListener('pointerdown', (e) => { 
+                if(e.cancelable) e.preventDefault(); 
+                GLOBAL_STATE.selectedCollectionId = id; 
+                renderCollection(false); // タップ時はスクロールしない
+                updateCollectionPreview(); 
+            }); 
+            grid.appendChild(item); 
+            if(id === GLOBAL_STATE.selectedCollectionId) selEl = item; 
+        }); 
+        updateCollectionPreview(); 
+        if(shouldScroll && selEl && document.getElementById('collection-screen').classList.contains('active')){ 
+            setTimeout(() => {
+                const containerHeight = grid.clientHeight;
+                const elTop = selEl.offsetTop - grid.offsetTop;
+                const elHeight = selEl.clientHeight;
+                grid.scrollTo({ top: elTop - (containerHeight / 2) + (elHeight / 2), behavior: 'smooth' });
+            }, 50);
+        } 
+    }
+function updateCollectionPreview() { 
+        const id = GLOBAL_STATE.selectedCollectionId, t = TSUM_DB[id], isO = GLOBAL_STATE.ownedTsums.hasOwnProperty(id), img = document.getElementById('col-preview-img'), set = document.getElementById('btn-set-mytsum'); 
+        img.style.backgroundImage = `url(${t.b64})`; 
+        if (isO) { 
+            img.classList.remove('locked'); 
+            document.getElementById('col-tsum-name').innerText = t.name; 
+            document.getElementById('col-tsum-desc').innerText = t.desc; 
+            if (id === GLOBAL_STATE.myTsumId) {
+                set.classList.add('disabled'); 
+                set.innerText = "セット中";
+            } else {
+                set.classList.remove('disabled'); 
+                set.innerText = "マイツムセット"; 
+            }
+        } else { 
+            img.classList.add('locked'); 
+            document.getElementById('col-tsum-name').innerText = "？？？"; 
+            document.getElementById('col-tsum-desc').innerText = "ストアでゲットしてね！"; 
+            set.classList.add('disabled'); 
+            set.innerText = "未所持"; 
+        } 
+    }
+
+function rollGacha() {
+    if (isGachaRolling) return; 
+    isGachaRolling = true;
+    saveData();
+    updateGlobalUI();
+    
+    const box = document.getElementById('gacha-box'), 
+          res = document.getElementById('gacha-result'), 
+          msg = document.getElementById('gacha-msg'), 
+          btn = document.getElementById('btn-roll-gacha'),
+          rad = document.getElementById('gacha-radiance'),
+          flash = document.getElementById('gacha-flash'),
+          container = document.getElementById('gacha-box-container');
+    
+    btn.style.opacity = '0.5';
+    res.classList.remove('show');
+    rad.classList.remove('radiance-active');
+    msg.style.opacity = '0'; msg.style.transform = 'translateX(-50%) scale(0.8)';
+    
+    box.classList.add('shake-anim');
+    
+    setTimeout(() => {
+        box.classList.remove('shake-anim');
+        box.classList.add('shake-intense');
+        
+        setTimeout(() => {
+            flash.style.animation = 'flashAnim 0.6s ease-out';
+            box.classList.remove('shake-intense');
+            
+            for(let i=0; i<20; i++) {
+                const star = document.createElement('div');
+                star.className = 'gacha-star';
+                const angle = (i / 20) * Math.PI * 2 + (Math.random() * 0.2 - 0.1); 
+                const dist = 120 + Math.random() * 80; 
+                star.style.left = '50%'; star.style.top = '50%';
+                const sizeBase = 0.5 + Math.random() * 1.5;
+                container.appendChild(star);
+                star.animate([
+                    { transform: `translate(-50%, -50%) scale(0) rotate(0deg)`, opacity: 1 },
+                    { transform: `translate(calc(-50% + ${Math.cos(angle)*dist}px), calc(-50% + ${Math.sin(angle)*dist}px)) scale(${sizeBase}) rotate(${360 + Math.random()*360}deg)`, opacity: 0 }
+                ], { duration: 700 + Math.random()*400, easing: 'cubic-bezier(0.175, 0.885, 0.32, 1.275)' });
+                setTimeout(() => star.remove(), 1200);
+            }
+            for(let i=0; i<30; i++) {
+                const p = document.createElement('div');
+                p.className = 'gacha-particle';
+                const angle = Math.random() * Math.PI * 2;
+                const dist = 80 + Math.random() * 120;
+                p.style.left = '50%'; p.style.top = '50%';
+                container.appendChild(p);
+                p.animate([
+                    { transform: `translate(-50%, -50%) scale(0)`, opacity: 1 },
+                    { transform: `translate(calc(-50% + ${Math.cos(angle)*dist}px), calc(-50% + ${Math.sin(angle)*dist}px)) scale(${1 + Math.random()})`, opacity: 0 }
+                ], { duration: 600 + Math.random()*400, easing: 'ease-out' });
+                setTimeout(() => p.remove(), 1100);
+            }
+            
+            const tid = TYPES_ARRAY[Math.floor(Math.random() * TYPES_ARRAY.length)];
+            const isN = !GLOBAL_STATE.ownedTsums.hasOwnProperty(tid);
+            if (isN) GLOBAL_STATE.ownedTsums[tid] = 1; else GLOBAL_STATE.ownedTsums[tid]++;
+            saveData();
+            
+            msg.innerText = isN ? "NEW ゲット！" : `レベルアップ! (Lv.${GLOBAL_STATE.ownedTsums[tid]})`;
+            res.style.backgroundImage = `url(${TSUM_DB[tid].b64})`;
+            res.classList.add('show');
+            rad.classList.add('radiance-active');
+            msg.style.opacity = '1'; msg.style.transform = 'translateX(-50%) scale(1.2)';
+            
+            setTimeout(() => {
+                isGachaRolling = false;
+                btn.style.opacity = '1';
+                flash.style.animation = '';
+            }, 1500);
+        }, 1200);
+    }, 800);
+}
+
+document.getElementById('title-screen').addEventListener('pointerdown', (e) => { if(e.cancelable) e.preventDefault(); initAudio(); showScreen('home-screen'); });
+document.getElementById('btn-play').addEventListener('pointerdown', (e) => { if(e.cancelable) e.preventDefault(); initAudio(); showScreen('game-screen'); if(currentGame) { currentGame.destroy(); } currentGame = new TsumGame(); });
+document.getElementById('btn-mytsum').addEventListener('pointerdown', (e) => { if(e.cancelable) e.preventDefault(); initAudio(); GLOBAL_STATE.selectedCollectionId = GLOBAL_STATE.myTsumId; renderCollection(true); showScreen('collection-screen'); });
+document.getElementById('btn-store').addEventListener('pointerdown', (e) => { if(e.cancelable) e.preventDefault(); initAudio(); document.getElementById('gacha-result').classList.remove('show'); document.getElementById('gacha-msg').style.opacity = '0'; document.getElementById('gacha-msg').style.transform = 'translateX(-50%) scale(0.8)'; document.getElementById('gacha-radiance').classList.remove('radiance-active'); showScreen('store-screen'); });
+document.getElementById('btn-back').addEventListener('pointerdown', (e) => { if(e.cancelable) e.preventDefault(); showScreen('home-screen'); });
+document.getElementById('btn-store-back').addEventListener('pointerdown', (e) => { if(e.cancelable) e.preventDefault(); if(isGachaRolling) return; showScreen('home-screen'); });
+document.getElementById('btn-roll-gacha').addEventListener('pointerdown', rollGacha);
+document.getElementById('btn-set-mytsum').addEventListener('pointerdown', (e) => { if(e.cancelable) e.preventDefault(); if (document.getElementById('btn-set-mytsum').classList.contains('disabled')) return; GLOBAL_STATE.myTsumId = GLOBAL_STATE.selectedCollectionId; saveData(); updateCollectionPreview(); updateGlobalUI(); });
+document.getElementById('btn-result-ok').addEventListener('pointerdown', () => { document.getElementById('result-overlay').style.display = 'none'; if(currentGame) { currentGame.destroy(); currentGame = null; } saveData(); showScreen('home-screen'); });
+
+
+
+// --- セーブデータ機能 ---
+document.getElementById('btn-save').addEventListener('pointerdown', () => {
+    initAudio();
+    try {
+        const jsonStr = JSON.stringify({ coins: GLOBAL_STATE.coins, myTsumId: GLOBAL_STATE.myTsumId, highScore: GLOBAL_STATE.highScore, ownedTsums: GLOBAL_STATE.ownedTsums });
+        const encrypted = btoa(encodeURIComponent(jsonStr));
+        document.getElementById('export-textarea').value = encrypted;
+        document.getElementById('import-textarea').value = '';
+        document.getElementById('copy-msg').style.opacity = '0';
+        document.getElementById('import-msg').style.opacity = '0';
+        document.getElementById('save-overlay').style.display = 'flex';
+    } catch(e) { console.error(e); }
+});
+
+document.getElementById('btn-close-save').addEventListener('pointerdown', () => {
+    document.getElementById('save-overlay').style.display = 'none';
+});
+
+document.getElementById('btn-copy-save').addEventListener('click', async () => {
+    const ta = document.getElementById('export-textarea');
+    const text = ta.value;
+    if (!text) return;
+    
+    try {
+        await navigator.clipboard.writeText(text);
+        const msg = document.getElementById('copy-msg');
+        msg.style.opacity = '1';
+        setTimeout(() => msg.style.opacity = '0', 2000);
+    } catch (err) {
+        ta.focus();
+        ta.setSelectionRange(0, 999999); 
+        try {
+            document.execCommand('copy');
+        } catch(e) {}
+        ta.blur(); 
+        
+        const msg = document.getElementById('copy-msg');
+        msg.style.opacity = '1';
+        setTimeout(() => msg.style.opacity = '0', 2000);
+    }
+});
+
+
+document.getElementById('btn-apply-save').addEventListener('pointerdown', () => {
+    const text = document.getElementById('import-textarea').value.trim();
+    const msg = document.getElementById('import-msg');
+    if (!text) {
+        msg.innerText = '文字列が入力されていません';
+        msg.style.color = '#ff8a80';
+        msg.style.opacity = '1';
+        setTimeout(() => msg.style.opacity = '0', 2000);
+        return;
+    }
+    try {
+        const decrypted = decodeURIComponent(atob(text));
+        const data = JSON.parse(decrypted);
+        
+        if (data && typeof data.coins !== 'undefined') {
+            if (data.coins !== undefined) GLOBAL_STATE.coins = data.coins;
+            if (data.myTsumId) GLOBAL_STATE.myTsumId = data.myTsumId;
+            if (data.highScore !== undefined) GLOBAL_STATE.highScore = data.highScore;
+            if (data.ownedTsums && typeof data.ownedTsums === 'object') {
+                GLOBAL_STATE.ownedTsums = data.ownedTsums;
+            }
+            saveData();
+            updateGlobalUI();
+            
+            msg.innerText = 'データを復元しました！';
+            msg.style.color = '#b2ff59';
+            msg.style.opacity = '1';
+            setTimeout(() => {
+                msg.style.opacity = '0';
+                document.getElementById('save-overlay').style.display = 'none';
+            }, 1500);
+        } else {
+            throw new Error("Invalid data format");
+        }
+    } catch (err) {
+        msg.innerText = '不正な文字列です';
+        msg.style.color = '#ff8a80';
+        msg.style.opacity = '1';
+        setTimeout(() => msg.style.opacity = '0', 2000);
+    }
+});
+
+// --- Main Game Engine ---
+const { Engine, Render, Runner, Bodies, Composite, Query, Body, Sleeping } = Matter;
+
+class TsumGame {
+      constructor() {
+        this.engine = Engine.create({ 
+            gravity: { x: 0, y: 1.2 }, 
+            positionIterations: 3, 
+            velocityIterations: 3, 
+            enableSleeping: true   
+        });
+
+        this.canvas = document.getElementById('game-canvas');
+        this.render = Render.create({ canvas: this.canvas, engine: this.engine, options: { width: 375, height: 667, wireframes: false, background: 'transparent', showSleeping: false } });
+        this.uiCanvas = document.getElementById('ui-canvas'); this.uiCtx = this.uiCanvas.getContext('2d', { alpha: true });
+
+        
+        this.score = 0; this.combo = 0; this.lastClearTime = 0; this.timeLeft = 60; this.feverGauge = 0; this.skillGauge = 0; this.displaySkillGauge = 0; this.coins = 0; this.isFever = false; this.isPlaying = false; this.timeStopTimer = 0; this.singleClearTimer = 0;
+        this.selectedTsums = []; this.isDragging = false; this.floatingTexts = []; this.effects = [];
+        
+        // ★追加：スキルアニメーション用のタイマー
+        this.skillAnimTimer = 0; 
+        
+        this.feverParticles = [];
+        const fColors = ['255, 235, 59', '0, 229, 255', '255, 0, 222', '178, 255, 89']; 
+        for (let i = 0; i < 35; i++) {
+            this.feverParticles.push({
+                x: Math.random() * 375, 
+                y: Math.random() * 700, 
+                size: Math.random() * 15 + 12, 
+                speed: Math.random() * 3 + 1.5, 
+                color: fColors[Math.floor(Math.random() * 4)], 
+                sinOffset: Math.random() * Math.PI * 2
+            });
+        }
+
+
+        this.myTsumId = GLOBAL_STATE.myTsumId; this.skillMax = 15; this.tsumSize = 27; this.shufflingTimer = 0;
+        this.runner = Runner.create();
+
+        
+        this.glowCanvas = document.createElement('canvas'); this.glowCanvas.width = 90; this.glowCanvas.height = 90;
+        const gCtx = this.glowCanvas.getContext('2d'); const grad = gCtx.createRadialGradient(45, 45, 5, 45, 45, 45);
+        grad.addColorStop(0, 'rgba(255,255,100,0.4)'); grad.addColorStop(0.4, 'rgba(0,150,255,0.3)'); grad.addColorStop(1, 'rgba(0,0,0,0)');
+        gCtx.fillStyle = grad; gCtx.beginPath(); gCtx.arc(45, 45, 45, 0, Math.PI*2); gCtx.fill();
+        
+        this.dom = { score: document.getElementById('score-val'), time: document.getElementById('time-box'), combo: document.getElementById('combo-val'), coin: document.getElementById('game-coin-val'), feverBar: document.getElementById('fever-bar'), feverText: document.getElementById('fever-text'), skillBtn: document.getElementById('skill-btn-wrapper'), skillGauge: document.getElementById('skill-gauge'), timerCircle: document.getElementById('timer-circle') };
+        this.lastUiState = { score: -1, time: -1, combo: -1, coin: -1, fever: -1, skill: -1, isFever: null };
+        this.init();
+    }
+    
+    init() {
+        try {
+            Composite.clear(this.engine.world); Engine.clear(this.engine);
+            
+            const floorY = 520;
+            const ground_center = Bodies.rectangle(375/2, floorY + 60, 260, 100, { isStatic: true, render: { fillStyle: 'transparent', strokeStyle: 'transparent', visible: false } });
+            const ground_left = Bodies.rectangle(50, floorY + 20, 160, 50, { isStatic: true, angle: Math.PI / 7, render: { fillStyle: 'transparent', strokeStyle: 'transparent', visible: false } });
+            const ground_right = Bodies.rectangle(375 - 50, floorY + 20, 160, 50, { isStatic: true, angle: -Math.PI / 7, render: { fillStyle: 'transparent', strokeStyle: 'transparent', visible: false } });
+            Composite.add(this.engine.world, [
+                ground_center, ground_left, ground_right, 
+                Bodies.rectangle(-25, 667/2, 50, 667, { isStatic: true, render: { fillStyle: 'transparent', strokeStyle: 'transparent', visible: false } }), 
+                Bodies.rectangle(375+25, 667/2, 50, 667, { isStatic: true, render: { fillStyle: 'transparent', strokeStyle: 'transparent', visible: false } })
+            ]);
+            
+            const owned = Object.keys(GLOBAL_STATE.ownedTsums); 
+            let av = owned.filter(id => id !== this.myTsumId && TSUM_DB[id]); av.sort(() => 0.5 - Math.random());
+            this.activeTypes = [this.myTsumId, ...av.slice(0, 4)].filter(id => TSUM_DB[id]);
+            if(this.activeTypes.length === 0) this.activeTypes = ['tsum_1'];
+            for (let i = 0; i < 45; i++) this.spawnTsum(true);
+            
+            this.handlers = { 
+                start: (e) => { if(!this.isPaused && e.cancelable) e.preventDefault(); this.handleStart(e.touches ? e.touches[0] : e); }, 
+                move: (e) => { if(!this.isPaused && e.cancelable) e.preventDefault(); this.handleMove(e.touches ? e.touches[0] : e); }, 
+                end: () => this.handleEnd(), 
+                skill: (e) => { e.stopPropagation(); if(!this.isPaused) this.useSkill(); }, 
+                fan: (e) => { e.stopPropagation(); if(!this.isPaused) this.shuffle(); },
+                pause: (e) => { e.stopPropagation(); this.togglePause(); },
+                resume: (e) => { e.stopPropagation(); this.resumeGame(); },
+                restart: (e) => { e.stopPropagation(); this.restartGame(); },
+                quit: (e) => { e.stopPropagation(); this.quitGame(); }
+            };
+            
+            const c = document.getElementById('game-canvas'); 
+            c.addEventListener('mousedown', this.handlers.start); c.addEventListener('mousemove', this.handlers.move); window.addEventListener('mouseup', this.handlers.end); 
+            c.addEventListener('touchstart', this.handlers.start, {passive:false}); c.addEventListener('touchmove', this.handlers.move, {passive:false}); window.addEventListener('touchend', this.handlers.end);
+            
+            document.getElementById('skill-btn-wrapper').addEventListener('pointerdown', this.handlers.skill);
+            document.getElementById('fan-btn-wrapper').addEventListener('pointerdown', this.handlers.fan);
+            
+            Render.run(this.render); Runner.run(this.runner, this.engine);
+            
+            this.lastFrameTime = 0; 
+            this.isPaused = false;
+            
+            document.getElementById('pause-btn').addEventListener('pointerdown', this.handlers.pause);
+            document.getElementById('btn-resume').addEventListener('pointerdown', this.handlers.resume);
+            document.getElementById('btn-restart').addEventListener('pointerdown', this.handlers.restart);
+            document.getElementById('btn-quit').addEventListener('pointerdown', this.handlers.quit);
+            
+            this.drawUI(); 
+            
+            BGM.stop();
+            
+            const ct = document.getElementById('center-text'); ct.className = 'text-ready'; ct.innerText = "READY..."; 
+                setTimeout(() => { 
+                ct.className = 'text-go'; ct.innerText = "GO!!"; 
+                setTimeout(() => { ct.className = ''; this.isPlaying = true; this.isPaused = false; this.lastFrameTime = Date.now(); BGM.play('game'); this.loop(); }, 800); 
+            }, 1500);
+
+
+            
+        } catch(e) { console.error(e); }
+    }
+    
+    togglePause() { if(!this.isPlaying) return; if(this.isPaused) this.resumeGame(); else this.pauseGame(); }
+    pauseGame() { this.isPaused = true; document.getElementById('pause-overlay').style.display = 'flex'; BGM.pause(); }
+    resumeGame() { this.isPaused = false; document.getElementById('pause-overlay').style.display = 'none'; this.lastFrameTime = Date.now(); BGM.resume(); this.loop(); }
+    restartGame() { document.getElementById('pause-overlay').style.display = 'none';  this.destroy(); currentGame = new TsumGame(); }
+    quitGame() { document.getElementById('pause-overlay').style.display = 'none'; this.destroy(); currentGame = null; showScreen('home-screen'); }
+    
+    destroy() { 
+        this.isPlaying = false; Render.stop(this.render); Runner.stop(this.runner); Composite.clear(this.engine.world); Engine.clear(this.engine); 
+        const c = document.getElementById('game-canvas'); 
+        c.removeEventListener('mousedown', this.handlers.start); c.removeEventListener('mousemove', this.handlers.move); window.removeEventListener('mouseup', this.handlers.end); 
+        c.removeEventListener('touchstart', this.handlers.start); c.removeEventListener('touchmove', this.handlers.move); window.removeEventListener('touchend', this.handlers.end);
+        document.getElementById('skill-btn-wrapper').removeEventListener('pointerdown', this.handlers.skill);
+        document.getElementById('fan-btn-wrapper').removeEventListener('pointerdown', this.handlers.fan);
+        document.getElementById('pause-btn').removeEventListener('pointerdown', this.handlers.pause);
+        document.getElementById('btn-resume').removeEventListener('pointerdown', this.handlers.resume);
+        document.getElementById('btn-restart').removeEventListener('pointerdown', this.handlers.restart);
+        document.getElementById('btn-quit').removeEventListener('pointerdown', this.handlers.quit);
+        document.getElementById('app-container').classList.remove('fever-active'); this.uiCtx.clearRect(0, 0, 375, 667);
+        
+        // ★追加：リセット時にスキルオーバーレイを隠す
+        document.getElementById('skill-cutin-overlay').style.display = 'none';
+        const cutinImg = document.getElementById('skill-cutin-img');
+        if(cutinImg) cutinImg.className = '';
+        const cutinRadiance = document.getElementById('skill-cutin-radiance');
+        if(cutinRadiance) cutinRadiance.classList.remove('radiance-active');
+        
+        if (this.timeStopTimer > 0) {
+            this.uiCtx.fillStyle = 'rgba(0, 50, 100, 0.4)';
+            this.uiCtx.fillRect(0, 0, 375, 667);
+            this.uiCtx.fillStyle = '#fff';
+            this.uiCtx.font = 'bold 24px "M PLUS Rounded 1c", sans-serif';
+            this.uiCtx.fillText("TIME STOP!", 375/2, 200);
+        }
+        if (this.singleClearTimer > 0) {
+            this.uiCtx.fillStyle = 'rgba(255, 235, 59, 0.2)';
+            this.uiCtx.fillRect(0, 0, 375, 667);
+            this.uiCtx.fillStyle = '#ffeb3b';
+            this.uiCtx.font = 'bold 24px "M PLUS Rounded 1c", sans-serif';
+            this.uiCtx.fillText("タップで消せるよ！", 375/2, 200);
+        } 
+    }
+    
+spawnTsum(initial = false, isBig = false, forcedLabel = null) { 
+        let t = forcedLabel || this.activeTypes[Math.floor(Math.random() * this.activeTypes.length)]; 
+        
+        if (!forcedLabel && this.myTsumId === 'tsum_12' && t !== 'tsum_12' && Math.random() < 0.20) t = 'tsum_12';
+        
+        if(!TSUM_DB[t]) t = 'tsum_1'; 
+        
+        const radius = isBig ? this.tsumSize * 2 : this.tsumSize;
+        
+        const imgWidth = TSUM_DB[t].imgWidth || 64;
+        const visualRatio = TSUM_DB[t].visualRatio || 1.0;
+        const scale = ((radius * 2) / imgWidth) * visualRatio;
+
+        const tsum = Bodies.circle(
+            Math.random() * 315 + 30, 
+            initial ? Math.random() * -400 : -50, 
+            radius, 
+            { 
+                friction: 0.02, 
+                restitution: 0.1, 
+                density: isBig ? 0.2 : 0.05, 
+                label: t, 
+                isBig: isBig, 
+                render: { 
+                    sprite: { 
+                        texture: TSUM_DB[t].b64, 
+                        xScale: scale, 
+                        yScale: scale 
+                    } 
+                } 
+            }
+        );
+        Composite.add(this.engine.world, tsum); 
+    }
+    spawnBomb(x, y) { Composite.add(this.engine.world, Bodies.circle(x, y, 34, { friction: 0.1, restitution: 0.2, label: 'bomb', render: { sprite: { texture: BOMB_IMG, xScale: 1.1, yScale: 1.1 } } })); }
+    
+    getMousePos(e) { const rect = this.canvas.getBoundingClientRect(); return { x: (e.clientX - rect.left) * (375 / rect.width), y: (e.clientY - rect.top) * (667 / rect.height) }; }
+    
+    handleStart(e) { 
+        // ★修正：スキル演出中は指の操作を受け付けない
+        if(!this.isPlaying || this.isPaused || this.skillAnimTimer > 0) return; 
+        const p = this.getMousePos(e), c = Matter.Query.point(this.engine.world.bodies, p)[0]; 
+        if (c && !c.isStatic) { 
+            if (c.label === 'bomb') {
+                this.explodeBomb(c); 
+            } else if (this.singleClearTimer > 0) {
+                this.clearTsums([c]);
+                       } else { 
+                this.isDragging = true; 
+                this.selectedTsums = [c]; 
+                c.render.opacity = 0.6; 
+                this.playAudioPuni(0); 
+            } 
+        } 
+    }
+   handleMove(e) { 
+        if (!this.isDragging || !this.isPlaying || this.isPaused) return; 
+        const p = this.getMousePos(e), h = Query.point(this.engine.world.bodies, p)[0]; 
+        
+        if (h && !h.isStatic && h.label === this.selectedTsums[0].label) { 
+            if (this.selectedTsums.length >= 2 && h === this.selectedTsums[this.selectedTsums.length-2]) { 
+                const removed = this.selectedTsums.pop(); 
+                removed.render.opacity = 1; 
+                return; 
+            } 
+            
+            const l = this.selectedTsums[this.selectedTsums.length-1];
+            const d = Math.hypot(h.position.x - l.position.x, h.position.y - l.position.y);
+            
+            const connectDist = (h.isBig || l.isBig) ? this.tsumSize * 5.0 : this.tsumSize * 3.2;
+
+                        if (d < connectDist && !this.selectedTsums.includes(h)) { 
+                this.selectedTsums.push(h); 
+                h.render.opacity = 0.6; 
+                this.playAudioPuni(this.selectedTsums.length - 1); 
+            } 
+
+        } 
+    }
+        handleEnd() { 
+        if (this.isDragging && !this.isPaused) { 
+            if (this.selectedTsums.length >= 3) { 
+                this.clearTsums(this.selectedTsums); 
+            } else {
+                this.selectedTsums.forEach(t => t.render.opacity = 1);
+            }
+            this.isDragging = false; 
+            this.selectedTsums = []; 
+        } 
+    }
+
+    playAudioPuni(chainCount) {
+        if (!audioCtx) return;
+        try {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            
+            const baseFreq = 500 + (chainCount * 30); 
+            
+            osc.type = 'sine'; 
+            osc.frequency.setValueAtTime(baseFreq, now);
+            osc.frequency.exponentialRampToValueAtTime(baseFreq + 200, now + 0.08); 
+            
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(0.3, now + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now);
+            osc.stop(now + 0.1);
+        } catch(e) {}
+    }
+
+    playAudioPop(count) { 
+        if (!audioCtx) return; 
+        try { 
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const now = audioCtx.currentTime;
+            
+            const baseScale = [523.25, 587.33, 659.25, 783.99, 880.00];
+            
+            for (let i = 0; i < count; i++) { 
+                const delay = now + (i * 0.06); 
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain(); 
+                
+                const octave = Math.floor(i / 5);
+                const noteIndex = i % 5;
+                const freq = baseScale[noteIndex] * Math.pow(2, octave);
+                
+                osc.type = 'sine'; 
+                osc.frequency.setValueAtTime(freq, delay); 
+                
+                gain.gain.setValueAtTime(0, delay); 
+                gain.gain.linearRampToValueAtTime(0.25, delay + 0.02); 
+                gain.gain.exponentialRampToValueAtTime(0.001, delay + 0.4); 
+                
+                osc.connect(gain); 
+                gain.connect(audioCtx.destination); 
+                osc.start(delay); 
+                osc.stop(delay + 0.5); 
+            } 
+        } catch(e) {} 
+    }
+
+    
+    playAudioBomb() { 
+        if (!audioCtx) return; 
+        try{ 
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const now = audioCtx.currentTime, o = audioCtx.createOscillator(), g = audioCtx.createGain(); 
+            o.type = 'sine'; o.frequency.setValueAtTime(250, now); o.frequency.exponentialRampToValueAtTime(30, now+0.2); 
+            g.gain.setValueAtTime(1.0, now); g.gain.exponentialRampToValueAtTime(0.001, now+0.3); 
+            o.connect(g); g.connect(audioCtx.destination); o.start(now); o.stop(now+0.3); 
+        }catch(e){} 
+    }
+
+    playAudioPoyon() {
+        if (!audioCtx) return;
+        try {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(300, now);
+            osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);
+            osc.frequency.exponentialRampToValueAtTime(400, now + 0.3);
+            
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(0.5, now + 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now);
+            osc.stop(now + 0.3);
+        } catch(e) {}
+    }
+
+    playAudioSharan() {
+        if (!audioCtx) return;
+        try {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const now = audioCtx.currentTime;
+            const freqs = [1046.50, 1318.51, 1567.98, 2093.00, 2637.02]; 
+            
+            freqs.forEach((freq, i) => {
+                const delay = now + (i * 0.04);
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, delay);
+                
+                gain.gain.setValueAtTime(0, delay);
+                gain.gain.linearRampToValueAtTime(0.2, delay + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.01, delay + 0.4);
+                
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(delay);
+                osc.stop(delay + 0.5);
+            });
+        } catch(e) {}
+    }
+    
+clearTsums(tsums) {
+        let logicalCount = 0; 
+        let myC = 0, lvB = 0; 
+        let labelCounts = {}; 
+
+        tsums.forEach(t => { 
+            const weight = t.isBig ? 5 : 1; 
+            logicalCount += weight;
+            if(t.label === this.myTsumId) myC += weight; 
+            lvB += (GLOBAL_STATE.ownedTsums[t.label] || 1) * 10 * weight; 
+            
+            labelCounts[t.label] = (labelCounts[t.label] || 0) + 1;
+        });
+
+        let max = 0;
+        let candidates = [];
+        for (let label in labelCounts) {
+            if (labelCounts[label] > max) {
+                max = labelCounts[label];
+                candidates = [label]; 
+            } else if (labelCounts[label] === max) {
+                candidates.push(label); 
+            }
+        }
+        const winnerLabel = candidates[Math.floor(Math.random() * candidates.length)];
+
+        this.playAudioPop(tsums.length); 
+        const lp = tsums[tsums.length-1].position;
+        
+        tsums.forEach(t => {
+            Matter.Body.setStatic(t, true);
+            t.label = 'popping';
+        });
+
+        const reversedTsums = [...tsums].reverse();
+        reversedTsums.forEach((t, i) => {
+            setTimeout(() => {
+                if (this.isPlaying) {
+                    this.effects.push({ x: t.position.x, y: t.position.y, life: 1.0, type: 'clear' }); 
+                    Matter.Composite.remove(this.engine.world, t); 
+
+                    this.engine.world.bodies.forEach(b => {
+                        if (!b.isStatic) Matter.Sleeping.set(b, false);
+                    });
+                }
+            }, i * 60); 
+        });
+
+
+        let coins = logicalCount >= 4 ? ((logicalCount-3)*2 + Math.floor(Math.random()*logicalCount)) : 0; 
+        this.coins += coins; 
+        this.floatingTexts.push({ x: lp.x, y: lp.y, text: `${logicalCount} CHAIN!`, life: 40 }); 
+        if (coins > 0) this.floatingTexts.push({ x: lp.x, y: lp.y-25, text: `+${coins} 💰`, life: 50, color: '#ffeb3b' });
+
+        this.score += (logicalCount*100 + (logicalCount>3?(logicalCount-3)*50:0) + lvB) * (this.isFever?3:1); 
+        this.combo++; 
+        this.lastClearTime = Date.now();
+
+        const cb = document.getElementById('combo-container'); 
+        cb.style.opacity = 1; cb.style.transform = 'scale(1.2)'; 
+        setTimeout(() => cb.style.transform='scale(1)', 100);
+
+        if(!this.isFever) this.feverGauge = Math.min(100, this.feverGauge + logicalCount*3);
+        if(myC > 0) this.skillGauge = Math.min(this.skillMax, this.skillGauge + myC);
+
+        if (logicalCount >= 12) {
+            let bCount = 1;
+            if (logicalCount >= 30) bCount = 4;
+            else if (logicalCount >= 24) bCount = 3;
+            else if (logicalCount >= 18) bCount = 2;
+            
+            for (let i = 0; i < bCount; i++) {
+                this.spawnBomb(lp.x + (Math.random() - 0.5) * 20, lp.y + (Math.random() - 0.5) * 20);
+            }
+        }
+
+        if (logicalCount >= 7 && Math.random() < 0.35) {
+            this.spawnTsum(false, true, winnerLabel);
+        }
+    }
+    
+explodeBomb(bomb) {
+        if(this.isPaused) return;
+        const p = bomb.position; this.playAudioBomb();
+        this.effects.push({ x: p.x, y: p.y, life: 1.0, type: 'bomb_flash' });
+        for(let i=0; i<15; i++){ this.effects.push({ x: p.x, y: p.y, life: 1.0, type: 'particle', vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, r: Math.random()*5+2, color: Math.random()>0.5?'#ffeb3b':'#ff9800' }); }
+        
+        const targets = []; const bodies = this.engine.world.bodies;
+        for(let i=0; i<bodies.length; i++) { const b = bodies[i]; if (!b.isStatic && b !== bomb && b.label !== 'bomb' && Math.hypot(b.position.x-p.x, b.position.y-p.y) < 100) targets.push(b); }
+        Composite.remove(this.engine.world, bomb); if(targets.length > 0) this.clearTsums(targets);
+        
+        this.timeLeft += 2;
+        this.floatingTexts.push({ x: p.x, y: p.y - 30, text: "+2 SEC!", life: 50, color: '#00e5ff' });
+    }
+    
+useSkill() { 
+        if (this.skillGauge >= this.skillMax && this.isPlaying && !this.isPaused && this.skillAnimTimer <= 0) { 
+            // ★追加：tsum_11は自動発動のため、手動ボタンによる演出をブロックする
+            if (this.myTsumId === 'tsum_11') return;
+            this.skillGauge = 0; this.displaySkillGauge = 0;
+            
+            // スキル演出開始
+            this.skillAnimTimer = 1.3; // 1.3秒に延長
+            const cutinOverlay = document.getElementById('skill-cutin-overlay');
+            const cutinImg = document.getElementById('skill-cutin-img');
+            const cutinRadiance = document.getElementById('skill-cutin-radiance');
+            const myTsum = TSUM_DB[this.myTsumId];
+            
+            cutinImg.style.backgroundImage = `url(${myTsum.b64})`;
+            cutinOverlay.style.display = 'flex';
+            cutinImg.className = ''; 
+            cutinRadiance.classList.remove('radiance-active'); 
+            
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    cutinImg.className = 'anim-skill-drop';
+                });
+            });
+            
+            // 0.3秒後（バウンドし始める瞬間）に後光を出す
+            setTimeout(() => {
+                if(!this.isPlaying) return;
+                this.playAudioPoyon();
+                cutinRadiance.classList.add('radiance-active');
+            }, 300);
+
+            // 0.9秒後（ポップ前）に破裂アニメーションと「しゃらん」
+            setTimeout(() => {
+                if(!this.isPlaying) return;
+                cutinImg.className = 'anim-skill-pop';
+                this.playAudioSharan();
+                // ★ここに追加：ツムが弾けるのと同時に後光も消え始める
+                cutinRadiance.classList.remove('radiance-active');
+            }, 900);
+            
+            // 1.3秒後にスキル効果本体を発動
+            setTimeout(() => {
+                if(!this.isPlaying) return;
+                cutinOverlay.style.display = 'none';
+                // (※ここにあった cutinRadiance の記述は上に移動しました)
+                this.executeSkillEffect();
+            }, 1300);
+        } 
+    }
+
+    // ★追加：実際のスキル効果を発動させる関数
+    executeSkillEffect() {
+        const bodies = this.engine.world.bodies.filter(b => !b.isStatic && b.label !== 'bomb');
+        const targets = [];
+        const id = this.myTsumId;
+
+        if (id === 'tsum_1') { 
+            bodies.forEach(b => { if (Math.hypot(b.position.x-375/2, b.position.y-333) < 130) targets.push(b); });
+        } else if (id === 'tsum_5' || id === 'tsum_8') { 
+            bodies.forEach(b => { if (b.position.y > 667 - 250) targets.push(b); });
+        } else if (id === 'tsum_7') { 
+            bodies.forEach(b => { if (Math.abs(b.position.x - 375/2) < 70) targets.push(b); });
+        } else if (id === 'tsum_9') { 
+            bodies.forEach(b => { if (Math.abs(b.position.y - 333) < 70) targets.push(b); });
+        } else if (id === 'tsum_12') { 
+            let counts = {};
+            bodies.forEach(b => {
+                if (!b.isStatic && b.label !== 'bomb' && b.label !== 'tsum_12') {
+                    counts[b.label] = (counts[b.label] || 0) + 1;
+                }
+            });
+            let maxCount = -1;
+            let maxLabels = [];
+            for (const [lbl, cnt] of Object.entries(counts)) {
+                if (cnt > maxCount) {
+                    maxCount = cnt;
+                    maxLabels = [lbl];
+                } else if (cnt === maxCount) {
+                    maxLabels.push(lbl);
+                }
+            }
+            if (maxLabels.length > 0) {
+                const tgtLabel = maxLabels[Math.floor(Math.random() * maxLabels.length)];
+                bodies.forEach(b => {
+                    if (b.label === 'tsum_12') {
+                        b.label = tgtLabel;
+                        b.render.sprite.texture = TSUM_DB[tgtLabel].b64;
+                        this.effects.push({ x: b.position.x, y: b.position.y, life: 1.0, type: 'clear' });
+                        for(let k=0; k<12; k++) {
+                            this.effects.push({ x: b.position.x + (Math.random()-0.5)*24, y: b.position.y + (Math.random()-0.5)*24, life: 1.2 + Math.random()*0.5, type: 'smoke', vx: (Math.random()-0.5)*3, vy: (Math.random()-0.5)*3 - 1, r: Math.random()*6 + 8, color: Math.random() > 0.5 ? '#888888' : '#ff00ff' });
+                        }
+                    }
+                });
+            }
+        } else if (id === 'tsum_6') { 
+            for(let i=0; i<3; i++) this.spawnBomb(375/2 + (Math.random()-0.5)*100, 333 + (Math.random()-0.5)*100);
+        } else if (id === 'tsum_4') { 
+            bodies.forEach(b => { Matter.Body.setVelocity(b, { x: (Math.random()-0.5)*5, y: -25 - Math.random()*10 }); });
+        } else if (id === 'tsum_3') { 
+            this.timeStopTimer = 5.0;
+        } else if (id === 'tsum_2') { 
+            this.singleClearTimer = 5.0;
+        } else if (id === 'tsum_10') { 
+            const others = bodies.filter(b => b.label !== 'tsum_9' && b.label !== 'tsum_10').sort(() => 0.5 - Math.random());
+            others.slice(0, 15).forEach(b => {
+                b.label = 'tsum_9';
+                b.render.sprite.texture = TSUM_DB['tsum_9'].b64;
+            });
+        }
+
+        if (targets.length > 0) this.clearTsums(targets);
+    }
+    
+       shuffle() { 
+        if(this.isPlaying && !this.isPaused) { 
+            this.shufflingTimer = 1.5; 
+            const bodies = this.engine.world.bodies; 
+            for(let i=0; i<bodies.length; i++){ 
+                if(!bodies[i].isStatic && bodies[i].label !== 'bomb') {
+                    Sleeping.set(bodies[i], false);
+                    Body.setVelocity(bodies[i], { x: (Math.random()-0.5)*30, y: -(Math.random()*4+4) }); 
+                }
+            } 
+        } 
+    }
+
+
+    
+    startFever() { this.isFever = true; BGM.play('fever'); this.timeLeft += 5; document.getElementById('app-container').classList.add('fever-active'); const ct = document.getElementById('center-text'); ct.className = 'text-ready'; ct.innerText = "FEVER!"; setTimeout(() => { ct.className = ''; }, 1000); }
+
+    
+    loop() {
+        if (!this.isPlaying || this.isPaused) return;
+        
+        try {
+            const now = Date.now();
+            let dt = (now - this.lastFrameTime) / 1000;
+            this.lastFrameTime = now;
+            if (dt > 0.1) dt = 0.1;
+            if (dt < 0) dt = 0;
+
+            // ★追加：スキルカットイン演出中は時間を進めない
+            if (this.skillAnimTimer > 0) {
+                this.skillAnimTimer -= dt;
+            } else {
+                if (this.isFever) { 
+                    this.feverGauge -= (100 / 12) * dt; 
+                    if (this.feverGauge <= 0) { this.isFever = false; BGM.play('game', false); this.feverGauge = 0; document.getElementById('app-container').classList.remove('fever-active'); } 
+                }
+                else { 
+                    if (this.feverGauge >= 100) this.startFever(); 
+                    else if (this.feverGauge > 0) this.feverGauge -= 0.6 * dt; 
+                }
+                
+                if (this.timeStopTimer > 0) { this.timeStopTimer -= dt; } else { this.timeLeft -= dt; } 
+                if (this.singleClearTimer > 0) { this.singleClearTimer -= dt; } 
+            }
+            
+            if (Date.now() - this.lastClearTime > 2000 && !this.isFever) { this.combo = 0; document.getElementById('combo-container').style.opacity = 0; }
+            
+            let tsumCount = 0; 
+            const bodies = this.engine.world.bodies;
+            if (this.shufflingTimer > 0) this.shufflingTimer -= dt;
+
+            for(let i=0; i<bodies.length; i++) { 
+                const b = bodies[i];
+                if(!b.isStatic) { 
+                    tsumCount++; 
+                    b.render.opacity = 1; 
+
+                    if (this.shufflingTimer <= 0 && b.position.y > 450 && Math.abs(b.velocity.y) < 0.1) {
+                        b.frictionAir = 0.15; 
+                    } else {
+                        b.frictionAir = 0.02; 
+                    }
+
+                } 
+            }
+
+            if (this.isDragging && !this.isPaused) { for(let i=0; i<this.selectedTsums.length; i++) { if(this.selectedTsums[i]) this.selectedTsums[i].render.opacity = 0.6; } }
+            if (tsumCount < 45) this.spawnTsum();
+
+            // ★追加：tsum_11 の自動スキル発動（演出なし・時間回復）
+            if (this.myTsumId === 'tsum_11' && this.skillGauge >= this.skillMax && this.skillAnimTimer <= 0) {
+                this.skillGauge = 0;
+                this.displaySkillGauge = 0; // ゲージの見た目もリセット
+                this.timeLeft += 5; // 時間を5秒追加
+                
+                // カットインは出さないが、発動したことがわかるように少し音と文字を出す
+                this.playAudioSharan(); 
+                this.floatingTexts.push({ x: 375/2, y: 300, text: "SKILL: +5 SEC!", life: 50, color: '#b2ff59' });
+            }
+
+            if (this.timeLeft <= 0) { 
+                this.timeLeft = 0; this.isPlaying = false;
+
+                GLOBAL_STATE.coins += this.coins; 
+
+                if (this.score > GLOBAL_STATE.highScore) GLOBAL_STATE.highScore = Math.floor(this.score); 
+                document.getElementById('result-score').innerText = Math.floor(this.score).toLocaleString(); 
+                document.getElementById('result-coins').innerText = this.coins; 
+                document.getElementById('result-overlay').style.display = 'flex'; 
+                saveData(); updateGlobalUI();
+            }
+
+            this.drawUI(); 
+        } catch(e) { console.error("Game loop error:", e); } 
+        finally {
+            if (this.isPlaying && !this.isPaused) requestAnimationFrame(() => this.loop());
+        }
+    }
+
+    drawUI() {
+        this.displaySkillGauge += (this.skillGauge - this.displaySkillGauge) * 0.15;
+        if (Math.abs(this.skillGauge - this.displaySkillGauge) < 0.01) this.displaySkillGauge = this.skillGauge;
+        
+        if (this.dom.skillGauge) {
+            let percent = this.displaySkillGauge / this.skillMax;
+            if (percent > 1) percent = 1;
+            if (percent < 0) percent = 0;
+            
+            if (percent <= 0.001) {
+                this.dom.skillGauge.setAttribute('d', 'M45,45 L45,0 A45,45 0 0,1 45,0 Z');
+            } else if (percent >= 0.999) {
+                this.dom.skillGauge.setAttribute('d', 'M45,45 m0,-45 a45,45 0 1,1 0,90 a45,45 0 1,1 0,-90');
+            } else {
+                const angle = percent * 360;
+                const rad = (angle - 90) * Math.PI / 180;
+                const x = 45 + 45 * Math.cos(rad);
+                const y = 45 + 45 * Math.sin(rad);
+                const largeArc = angle > 180 ? 1 : 0;
+                this.dom.skillGauge.setAttribute('d', `M45,45 L45,0 A45,45 0 ${largeArc},1 ${x},${y} Z`);
+            }
+        }
+
+        const sc = Math.floor(this.score); 
+        if (this.lastUiState.score !== sc) { 
+            if(this.dom.score) this.dom.score.innerText = sc.toLocaleString(); 
+            this.lastUiState.score = sc; 
+        }
+        
+        const tm = Math.ceil(this.timeLeft); 
+        if (this.lastUiState.time !== tm) { 
+            if(this.dom.time) this.dom.time.innerText = tm; 
+            this.lastUiState.time = tm; 
+        }
+        if(this.dom.timerCircle) { 
+            const timeRatio = Math.min(1, this.timeLeft / 60);
+            const gap = 201 * (1 - timeRatio); 
+            
+            this.dom.timerCircle.style.strokeDasharray = `0 ${gap} ${201 - gap} 0`;
+            this.dom.timerCircle.style.strokeDashoffset = 0; 
+        }
+
+
+        
+        
+        if (this.lastUiState.combo !== this.combo) { if(this.dom.combo) this.dom.combo.innerText = this.combo; this.lastUiState.combo = this.combo; }
+        if (this.lastUiState.coin !== this.coins) { if(this.dom.coin) this.dom.coin.innerText = this.coins.toLocaleString(); this.lastUiState.coin = this.coins; }
+        
+        const fv = this.feverGauge.toFixed(1);
+        if (this.lastUiState.fever !== fv) { if(this.dom.feverBar) this.dom.feverBar.style.width = fv + '%'; this.lastUiState.fever = fv; }
+
+        
+        if (this.lastUiState.isFever !== this.isFever) { 
+            if(this.dom.feverText) this.dom.feverText.style.color = this.isFever ? '#d50000' : 'rgba(255,255,255,0.5)'; 
+            this.lastUiState.isFever = this.isFever; 
+        }
+        
+        const skp = Math.min(100, Math.floor((this.skillGauge / this.skillMax) * 100));
+        if (this.lastUiState.skill !== skp) { 
+            if(this.dom.skillBtn) {
+                if (this.skillGauge >= this.skillMax) this.dom.skillBtn.classList.add('ready'); else this.dom.skillBtn.classList.remove('ready'); 
+            }
+            this.lastUiState.skill = skp; 
+        }
+
+        this.uiCtx.clearRect(0, 0, 375, 667);
+        if (this.timeStopTimer > 0) {
+            this.uiCtx.fillStyle = 'rgba(0, 50, 100, 0.4)';
+            this.uiCtx.fillRect(0, 0, 375, 667);
+            this.uiCtx.fillStyle = '#fff';
+            this.uiCtx.font = 'bold 24px "M PLUS Rounded 1c", sans-serif';
+            this.uiCtx.fillText("TIME STOP!", 375/2, 200);
+        }
+        if (this.singleClearTimer > 0) {
+            this.uiCtx.fillStyle = 'rgba(255, 235, 59, 0.2)';
+            this.uiCtx.fillRect(0, 0, 375, 667);
+            this.uiCtx.fillStyle = '#ffeb3b';
+            this.uiCtx.font = 'bold 24px "M PLUS Rounded 1c", sans-serif';
+            this.uiCtx.fillText("タップで消せるよ！", 375/2, 200);
+        }
+        
+        if (this.isFever) {
+            this.uiCtx.save();
+            this.uiCtx.globalCompositeOperation = 'lighter'; 
+            
+            this.feverParticles.forEach(p => {
+                p.y -= p.speed; 
+                p.x += Math.sin(Date.now() / 200 + p.sinOffset) * 1.5; 
+                if (p.y < -80) { 
+                    p.y = 667 + Math.random() * 50;
+                    p.x = Math.random() * 375;
+                }
+                this.uiCtx.beginPath();
+                this.uiCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                
+                const grad = this.uiCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
+                grad.addColorStop(0, 'rgba(255, 255, 255, 1)');      
+                grad.addColorStop(0.2, 'rgba(255, 255, 255, 0.8)');  
+                grad.addColorStop(0.5, `rgba(${p.color}, 0.5)`);     
+                grad.addColorStop(1, `rgba(${p.color}, 0)`);         
+                
+                this.uiCtx.fillStyle = grad;
+                this.uiCtx.fill();
+            });
+            this.uiCtx.restore();
+        }
+
+
+
+
+        for (let i = this.effects.length - 1; i >= 0; i--) {
+            let e = this.effects[i]; 
+
+            if (i > 50) { this.effects.splice(0, 1); continue; }
+            
+            e.life -= (e.type === 'particle' ? 0.04 : (e.type === 'smoke' ? 0.04 : 0.07)); 
+            if (e.life <= 0) { this.effects.splice(i, 1); continue; }
+            
+            this.uiCtx.save(); this.uiCtx.globalAlpha = Math.max(0, Math.min(1, e.life));
+            if (e.type === 'clear') { this.uiCtx.beginPath(); this.uiCtx.arc(e.x, e.y, 10+(1-e.life)*30, 0, Math.PI*2); this.uiCtx.fillStyle = '#fff'; this.uiCtx.fill(); this.uiCtx.strokeStyle = '#fff'; this.uiCtx.stroke(); }
+            else if (e.type === 'bomb_flash') { this.uiCtx.beginPath(); this.uiCtx.arc(e.x, e.y, 20+(1-e.life)*150, 0, Math.PI*2); this.uiCtx.fillStyle = 'rgba(255,255,255,0.6)'; this.uiCtx.fill(); }
+            else if (e.type === 'particle') { e.x += e.vx; e.y += e.vy; e.vy += 0.2; this.uiCtx.beginPath(); this.uiCtx.arc(e.x, e.y, e.r, 0, Math.PI*2); this.uiCtx.fillStyle = e.color; this.uiCtx.fill(); }
+            else if (e.type === 'smoke') { e.x += e.vx; e.y += e.vy; e.r += 0.8; this.uiCtx.beginPath(); this.uiCtx.arc(e.x, e.y, e.r, 0, Math.PI*2); this.uiCtx.fillStyle = e.color; this.uiCtx.fill(); }
+            this.uiCtx.restore();
+        }
+
+
+             if (this.isDragging && this.selectedTsums.length > 0) {
+            this.uiCtx.save();
+
+            const startTsum = this.selectedTsums[0];
+            const sameTypeBodies = this.engine.world.bodies.filter(b => !b.isStatic && b.label === startTsum.label);
+            const connectable = new Set();
+            const queue = [startTsum];
+            connectable.add(startTsum.id);
+
+            while(queue.length > 0) {
+                const current = queue.shift();
+                for(let i=0; i<sameTypeBodies.length; i++) {
+                    const b = sameTypeBodies[i];
+                    if(!connectable.has(b.id)) {
+                        const connectDist = (current.isBig || b.isBig) ? this.tsumSize * 5.0 : this.tsumSize * 3.2;
+                        const d = Math.hypot(b.position.x - current.position.x, b.position.y - current.position.y);
+                        if(d < connectDist) {
+                            connectable.add(b.id);
+                            queue.push(b);
+                        }
+                    }
+                }
+            }
+
+            sameTypeBodies.forEach(t => {
+                if (connectable.has(t.id) && !this.selectedTsums.includes(t)) {
+                    this.uiCtx.beginPath();
+                    this.uiCtx.arc(t.position.x, t.position.y, (t.isBig ? this.tsumSize * 2 : this.tsumSize) * 0.9, 0, Math.PI*2);
+                    this.uiCtx.fillStyle = 'rgba(255, 255, 255, 0.4)'; 
+                    this.uiCtx.fill();
+                }
+            });
+
+            this.uiCtx.beginPath(); this.uiCtx.moveTo(this.selectedTsums[0].position.x, this.selectedTsums[0].position.y);
+            for (let i=1; i<this.selectedTsums.length; i++) this.uiCtx.lineTo(this.selectedTsums[i].position.x, this.selectedTsums[i].position.y);
+            this.uiCtx.lineCap = 'round'; this.uiCtx.lineJoin = 'round';
+            this.uiCtx.shadowColor = '#00e5ff'; this.uiCtx.shadowBlur = 12;
+            this.uiCtx.lineWidth = 16; this.uiCtx.strokeStyle = 'rgba(0, 229, 255, 0.6)'; this.uiCtx.stroke();
+            this.uiCtx.shadowBlur = 0;
+            this.uiCtx.lineWidth = 6; this.uiCtx.strokeStyle = '#ffffff'; this.uiCtx.stroke();
+            const lastT = this.selectedTsums[this.selectedTsums.length-1];
+            this.uiCtx.beginPath(); this.uiCtx.arc(lastT.position.x, lastT.position.y, 8, 0, Math.PI*2);
+            this.uiCtx.fillStyle = '#fff'; this.uiCtx.shadowColor = '#00e5ff'; this.uiCtx.shadowBlur = 10; this.uiCtx.fill();
+            this.uiCtx.restore();
+        }
+
+
+        this.uiCtx.lineWidth = 3; this.uiCtx.font = 'bold 22px sans-serif'; this.uiCtx.textAlign = 'center';
+        for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
+            const ft = this.floatingTexts[i];
+            this.uiCtx.fillStyle = ft.color || '#fff'; this.uiCtx.strokeStyle = '#000';
+            this.uiCtx.strokeText(ft.text, ft.x, ft.y); this.uiCtx.fillText(ft.text, ft.x, ft.y);
+            ft.y -= 1; ft.life--; if (ft.life <= 0) this.floatingTexts.splice(i, 1);
+        }
+    }
+}
+
+loadData(); updateGlobalUI();
+</script>
+</body>
+</html>
